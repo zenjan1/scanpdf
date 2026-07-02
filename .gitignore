@@ -1,0 +1,159 @@
+# Flutter
+*.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+flutter_*.png
+linked_*.ds
+unlinked.ds
+unlinked_spec.ds
+
+# Dart - 只跟踪 lib 和 test 下的源码
+*.dart_tool/
+
+
+# Android
+*.iml
+*.apk
+*.aab
+*.ap_
+*.dex
+.classpath
+.gradle/
+local.properties
+*.keystore
+!debug.keystore
+android/app/release/
+
+# iOS
+*.mode1v3
+*.mode2v3
+*.moved-aside
+*.pbxuser
+*.perspectivev3
+**/*sync/
+.sconsign.dblite
+.tags*
+**/.vagrant/
+**/DerivedData/
+Icon?
+**/Pods/
+**/.symlinks/
+profile
+xcuserdata
+**/.generated/
+Flutter/App.framework
+Flutter/Flutter.framework
+Flutter/Flutter.podspec
+Flutter/Generated.xcconfig
+Flutter/ephemeral
+Flutter/app.flx
+Flutter/app.zip
+Flutter/flutter_assets/
+Flutter/flutter_export_environment.sh
+ServiceDefinitions.json
+Runner/ExportOptions.plist
+Output/
+*.xcworkspace
+!default.xcworkspace
+
+# macOS
+**/Flutter/ephemeral/
+Preview Release/
+
+# HarmonyOS
+harmony/.cxx/
+harmony/.gradle/
+harmony/.idea/
+harmony/build/
+harmony/*/build/
+harmony/*/node_modules/
+harmony/*/oh_modules/
+*.hvigor/
+
+# Server
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.pytest_cache/
+.mypy_cache/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+server/data/*.db
+
+# Uploads
+server/data/uploads/*
+!server/data/uploads/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Docker
+docker-compose.override.yml
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# SSL
+deploy/ssl/*.pem
+deploy/ssl/*.key
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*~
+.DS_Store
+Thumbs.db
+
+# Testing
+.coverage
+coverage/
+htmlcov/
+
+# Build outputs
+dist/
+*.egg-info/
+
+# Redis
+dump.rdb
+
+# PostgreSQL
+postgres_data/
+
+# Misc
+*.bak
+*.swp
+*.tmp

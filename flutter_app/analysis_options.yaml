@@ -1,0 +1,33 @@
+# Flutter 代码规范配置
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # 代码风格
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    avoid_print: true
+    
+    # 命名规范
+    camel_case_types: true
+    file_names: true
+    library_names: true
+    
+    # 最佳实践
+    avoid_unnecessary_containers: true
+    prefer_single_quotes: true
+    sort_child_properties_last: true
+    unnecessary_statements: true
+    
+    # 类型安全
+    strict_casts: true
+    strict_inference: true
+    strict_raw_type: true
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/generated/**"
+  errors:
+    invalid_annotation_target: ignore

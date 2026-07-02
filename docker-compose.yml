@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: scanpdf-db
+    restart: always
+    environment:
+      POSTGRES_USER: scanpdf
+      POSTGRES_PASSWORD: scanpdf_password
+      POSTGRES_DB: scanpdf
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scanpdf"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: scanpdf-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI 后端
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: scanpdf-backend
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://scanpdf:scanpdf_password@postgres:5432/scanpdf
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production-use-long-random-string}
+      UPLOAD_DIR: /data/scanpdf/uploads
+      DEBUG: "false"
+    volumes:
+      - upload_data:/data/scanpdf/uploads
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Nginx 反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: scanpdf-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./deploy/ssl:/etc/nginx/ssl
+      - upload_data:/data/scanpdf/uploads
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
+  upload_data:

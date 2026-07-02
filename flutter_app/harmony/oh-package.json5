@@ -1,0 +1,13 @@
+{
+  "modelVersion": "5.0.0",
+  "description": "ScanPDF - 智能扫描办公 for HarmonyOS",
+  "dependencies": {
+    "@ohos/flutter_ohos": "file:./flutter_ohos"
+  },
+  "devDependencies": {
+    "@ohos/hypium": "1.0.6"
+  },
+  "overrides": {
+    "@ohos/flutter_ohos": "file:./flutter_ohos"
+  }
+}
