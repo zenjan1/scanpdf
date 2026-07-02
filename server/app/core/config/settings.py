@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: List[str] = ["*"]  # Configure properly in production
 
+    # Redis
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
     # Base URL
     BASE_URL: str = os.getenv("BASE_URL", "https://jp.zenjan.store")
 
