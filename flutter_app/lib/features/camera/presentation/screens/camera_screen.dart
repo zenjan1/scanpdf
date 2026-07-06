@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:scanpdf/core/theme/app_colors.dart';
 
@@ -245,8 +246,27 @@ class _CameraScreenState extends State<CameraScreen>
                         _buildCircleButton(
                           icon: Icons.photo_library,
                           size: 44,
-                          onTap: () {
-                            // TODO: Open gallery picker
+                          onTap: () async {
+                            final picker = ImagePicker();
+                            final images = await picker.pickMultiImage(
+                              imageQuality: 90,
+                            );
+                            if (images.isNotEmpty && mounted) {
+                              final paths = <String>[];
+                              final dir = await getTemporaryDirectory();
+                              for (final img in images) {
+                                final fileName =
+                                    'gallery_${DateTime.now().millisecondsSinceEpoch}_${img.name}';
+                                final savedPath = '${dir.path}/$fileName';
+                                await File(savedPath).writeAsBytes(await img.readAsBytes());
+                                paths.add(savedPath);
+                              }
+                              if (mounted) {
+                                context.pushReplacement('/scan', extra: {
+                                  'imagePaths': paths,
+                                });
+                              }
+                            }
                           },
                         ),
 

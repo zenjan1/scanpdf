@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:scanpdf/core/theme/app_colors.dart';
 import 'package:scanpdf/core/services/storage_service.dart';
+import 'package:scanpdf/core/services/network_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Settings screen for app configuration
@@ -13,6 +14,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final StorageService _storageService = StorageService();
+  final NetworkService _networkService = NetworkService();
   bool _autoEnhance = true;
   bool _autoSave = true;
   bool _cloudSync = false;
@@ -21,6 +23,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _imageQuality = '高';
   int _storageUsed = 0;
   String _serverUrl = 'https://jp.zenjan.store';
+  bool _isLoggedIn = false;
+  String _username = '';
+  String _email = '';
 
   @override
   void initState() {
@@ -39,6 +44,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _defaultExportFormat = prefs.getString('defaultExportFormat') ?? 'PDF';
       _imageQuality = prefs.getString('imageQuality') ?? '高';
       _serverUrl = prefs.getString('serverUrl') ?? 'https://jp.zenjan.store';
+      _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+      _username = prefs.getString('username') ?? '';
+      _email = prefs.getString('email') ?? '';
     });
   }
 
@@ -231,26 +239,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            const CircleAvatar(
+            CircleAvatar(
               radius: 28,
               backgroundColor: AppColors.primary,
-              child: Icon(Icons.person, color: Colors.white, size: 28),
+              child: Icon(
+                _isLoggedIn ? Icons.person : Icons.person_outline,
+                color: Colors.white,
+                size: 28,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '未登录',
-                    style: TextStyle(
+                  Text(
+                    _isLoggedIn ? _username : '未登录',
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '登录以使用云同步功能',
+                    _isLoggedIn ? _email : '登录以使用云同步功能',
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.grey[600],
@@ -260,18 +272,154 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             ElevatedButton(
-              onPressed: () {
-                // TODO: Implement login
-              },
+              onPressed: _isLoggedIn ? _logout : _showLoginDialog,
               style: ElevatedButton.styleFrom(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
-              child: const Text('登录'),
+              child: Text(_isLoggedIn ? '退出' : '登录'),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showLoginDialog() {
+    final usernameController = TextEditingController();
+    final passwordController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('登录'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: usernameController,
+              decoration: const InputDecoration(
+                labelText: '用户名',
+                prefixIcon: Icon(Icons.person),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: '密码',
+                prefixIcon: Icon(Icons.lock),
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await _login(
+                usernameController.text,
+                passwordController.text,
+              );
+            },
+            child: const Text('登录'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _login(String username, String password) async {
+    if (username.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请输入用户名和密码')),
+      );
+      return;
+    }
+
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // TODO: Implement actual API login
+      // For now, simulate successful login
+      await Future.delayed(const Duration(seconds: 1));
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+      await prefs.setString('username', username);
+      await prefs.setString('email', '$username@example.com');
+
+      setState(() {
+        _isLoggedIn = true;
+        _username = username;
+        _email = '$username@example.com';
+      });
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('登录成功')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('登录失败: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _logout() async {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('退出登录'),
+        content: const Text('确定要退出登录吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.remove('isLoggedIn');
+              await prefs.remove('username');
+              await prefs.remove('email');
+
+              setState(() {
+                _isLoggedIn = false;
+                _username = '';
+                _email = '';
+              });
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('已退出登录')),
+                );
+              }
+            },
+            child: const Text('确定', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
       ),
     );
   }

@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:scanpdf/core/theme/app_colors.dart';
 import 'package:scanpdf/core/services/ocr_service.dart';
 import 'package:scanpdf/shared/widgets/app_button.dart';
@@ -73,6 +75,50 @@ class _OcrScreenState extends State<OcrScreen> {
     _scrollController.dispose();
     _ocrService.close();
     super.dispose();
+  }
+
+  void _shareText(String text) async {
+    try {
+      // Save text to a temp file for sharing
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/ocr_text_${DateTime.now().millisecondsSinceEpoch}.txt');
+      await file.writeAsString(text);
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: text,
+        subject: 'OCR 识别结果',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('分享失败: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveText(String text) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final saveDir = Directory('${dir.path}/ocr_texts');
+      if (!await saveDir.exists()) {
+        await saveDir.create(recursive: true);
+      }
+      final fileName = 'ocr_${DateTime.now().millisecondsSinceEpoch}.txt';
+      final file = File('${saveDir.path}/$fileName');
+      await file.writeAsString(text);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已保存到: $fileName')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存失败: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -218,9 +264,9 @@ class _OcrScreenState extends State<OcrScreen> {
                       text: '分享',
                       icon: Icons.share,
                       isOutlined: true,
-                      onPressed: () {
-                        // TODO: Implement share functionality
-                      },
+                      onPressed: _textController.text.isEmpty
+                          ? null
+                          : () => _shareText(_textController.text),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -228,10 +274,9 @@ class _OcrScreenState extends State<OcrScreen> {
                     child: AppButton(
                       text: '保存',
                       icon: Icons.save,
-                      onPressed: () {
-                        // TODO: Save extracted text
-                        Navigator.pop(context, _textController.text);
-                      },
+                      onPressed: _textController.text.isEmpty
+                          ? null
+                          : () => _saveText(_textController.text),
                     ),
                   ),
                 ],

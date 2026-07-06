@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:scanpdf/core/theme/app_colors.dart';
 import 'package:scanpdf/core/services/image_processing_service.dart';
 import 'package:scanpdf/core/services/pdf_service.dart';
@@ -110,6 +111,53 @@ class _ScannerScreenState extends State<ScannerScreen>
     }
   }
 
+  Future<void> _shareDocument() async {
+    if (_imagePaths.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('没有可分享的文档')),
+      );
+      return;
+    }
+
+    try {
+      // Share images directly or create PDF first
+      if (_imagePaths.length == 1) {
+        await Share.shareXFiles(
+          [XFile(_imagePaths[0])],
+          text: '分享的扫描文档',
+        );
+      } else {
+        // For multiple images, share as PDF
+        final docId = await _storageService.generateDocumentId();
+        final pdfPath = await _storageService.getDocumentPath(docId);
+        List<String> ocrTexts = [];
+
+        if (_ocrEnabled) {
+          for (final path in _imagePaths) {
+            final text = await _ocrService.extractText(path);
+            ocrTexts.add(text);
+          }
+        }
+
+        final pdfBytes = _ocrEnabled
+            ? await _pdfService.createSearchablePdf(_imagePaths, ocrTexts)
+            : await _pdfService.createPdfFromImages(_imagePaths);
+
+        await File(pdfPath).writeAsBytes(pdfBytes);
+        await Share.shareXFiles(
+          [XFile(pdfPath)],
+          text: '分享的扫描文档',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('分享失败: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _saveAsPdf() async {
     setState(() => _isProcessing = true);
 
@@ -168,9 +216,7 @@ class _ScannerScreenState extends State<ScannerScreen>
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
-            onPressed: () {
-              // TODO: Share document
-            },
+            onPressed: _shareDocument,
           ),
         ],
       ),

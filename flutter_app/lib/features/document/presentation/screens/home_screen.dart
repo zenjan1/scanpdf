@@ -1,7 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:scanpdf/core/theme/app_colors.dart';
+import 'package:scanpdf/features/document/domain/entities/document.dart';
 import 'package:scanpdf/features/document/presentation/bloc/document_bloc.dart';
 import 'package:scanpdf/features/document/presentation/widgets/document_card.dart';
 import 'package:scanpdf/shared/widgets/app_button.dart';
@@ -15,6 +20,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
+  int _currentIndex = 0;
 
   @override
   void dispose() {
@@ -146,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       return DocumentCard(
                         document: document,
                         onTap: () {
-                          // TODO: Navigate to document detail
+                          _openDocument(document);
                         },
                         onFavoriteTap: () {
                           context.read<DocumentBloc>().add(
@@ -194,11 +200,94 @@ class _HomeScreenState extends State<HomeScreen> {
             label: '我的',
           ),
         ],
+        currentIndex: _currentIndex,
         onTap: (index) {
-          // Handle navigation
+          setState(() => _currentIndex = index);
+          switch (index) {
+            case 0:
+              context.read<DocumentBloc>().add(LoadDocumentsEvent());
+              break;
+            case 1:
+              // Documents tab - already showing
+              break;
+            case 2:
+              // Favorites tab - load all then filter client-side
+              context.read<DocumentBloc>().add(LoadDocumentsEvent());
+              break;
+            case 3:
+              context.push('/settings');
+              break;
+          }
         },
       ),
     );
+  }
+
+  void _openDocument(Document document) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(document.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('页数: ${document.pageCount}'),
+            Text('创建时间: ${DateFormat('yyyy-MM-dd HH:mm').format(document.createdAt)}'),
+            Text('更新时间: ${DateFormat('yyyy-MM-dd HH:mm').format(document.updatedAt)}'),
+            if (document.tags.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              const Text('标签:'),
+              Wrap(
+                spacing: 4,
+                children: document.tags.map((tag) => Chip(
+                  label: Text(tag),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                )).toList(),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _shareDocument(document);
+            },
+            child: const Text('分享'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _shareDocument(Document document) async {
+    try {
+      final pdfPath = '${await getApplicationDocumentsDirectory()}/documents/${document.id}.pdf';
+      final file = File(pdfPath);
+      if (await file.exists()) {
+        await Share.shareXFiles(
+          [XFile(pdfPath)],
+          text: '分享文档: ${document.title}',
+        );
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('PDF 文件不存在')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('分享失败: $e')),
+        );
+      }
+    }
   }
 
   void _showDeleteDialog(String documentId) {

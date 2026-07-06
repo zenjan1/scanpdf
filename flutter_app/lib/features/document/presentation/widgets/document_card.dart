@@ -9,6 +9,8 @@ class DocumentCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onFavoriteTap;
   final VoidCallback? onDeleteTap;
+  final void Function(String newName)? onRename;
+  final VoidCallback? onShare;
 
   const DocumentCard({
     super.key,
@@ -16,6 +18,8 @@ class DocumentCard extends StatelessWidget {
     this.onTap,
     this.onFavoriteTap,
     this.onDeleteTap,
+    this.onRename,
+    this.onShare,
   });
 
   @override
@@ -142,10 +146,10 @@ class DocumentCard extends StatelessWidget {
                           onDeleteTap?.call();
                           break;
                         case 'share':
-                          // TODO: Share document
+                          onShare?.call();
                           break;
                         case 'rename':
-                          // TODO: Rename document
+                          _showRenameDialog(context);
                           break;
                       }
                     },
@@ -192,6 +196,45 @@ class DocumentCard extends StatelessWidget {
   }
 
   File _imageFile() => File(document.thumbnailPath!);
+
+  void _showRenameDialog(BuildContext context) {
+    final controller = TextEditingController(text: document.title);
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('重命名文档'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: '文档名称',
+            border: OutlineInputBorder(),
+          ),
+          onSubmitted: (value) {
+            if (value.trim().isNotEmpty) {
+              onRename?.call(value.trim());
+              Navigator.pop(dialogContext);
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                onRename?.call(controller.text.trim());
+                Navigator.pop(dialogContext);
+              }
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildPlaceholder() {
     return Container(
