@@ -12,9 +12,9 @@ import 'package:scanpdf/shared/widgets/app_button.dart';
 /// Scanner screen for edge detection, cropping, and image enhancement
 /// Inspired by CamScanner's scan flow: capture → edge detect → crop → enhance → export
 class ScannerScreen extends StatefulWidget {
-  final Map<String, dynamic> params;
+  final Map<String, dynamic>? params;
 
-  const ScannerScreen({super.key, required this.params});
+  const ScannerScreen({super.key, this.params});
 
   @override
   State<ScannerScreen> createState() => _ScannerScreenState();
@@ -48,10 +48,12 @@ class _ScannerScreenState extends State<ScannerScreen>
     _tabController = TabController(length: 3, vsync: this);
 
     // Parse incoming image paths
-    if (widget.params.containsKey('imagePaths')) {
-      _imagePaths = List<String>.from(widget.params['imagePaths']);
-    } else if (widget.params.containsKey('imagePath')) {
-      _imagePaths = [widget.params['imagePath'] as String];
+    if (widget.params != null) {
+      if (widget.params!.containsKey('imagePaths')) {
+        _imagePaths = List<String>.from(widget.params!['imagePaths']);
+      } else if (widget.params!.containsKey('imagePath')) {
+        _imagePaths = [widget.params!['imagePath'] as String];
+      }
     }
   }
 

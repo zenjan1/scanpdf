@@ -14,10 +14,10 @@ class ImageProcessingService {
       
       // Apply Gaussian blur
       final blurred = img.gaussianBlur(grayscale, radius: 2);
-      
-      // Apply Canny edge detection
-      final edges = img.cannyEdgeDetection(blurred);
-      
+
+      // Apply edge detection using Sobel
+      final edges = img.sobel(blurred);
+
       return Uint8List.fromList(img.encodeJpg(edges));
     } catch (e) {
       throw Exception('Edge detection failed: $e');
@@ -61,10 +61,13 @@ class ImageProcessingService {
         brightness: 10,
       );
 
-      // Sharpen
-      final sharpened = img.sharpen(enhanced);
+      // Apply color boost for enhancement
+      final boosted = img.adjustColor(
+        enhanced,
+        saturation: 1.2,
+      );
 
-      return Uint8List.fromList(img.encodeJpg(sharpened, quality: 90));
+      return Uint8List.fromList(img.encodeJpg(boosted, quality: 90));
     } catch (e) {
       throw Exception('Image enhancement failed: $e');
     }
@@ -135,20 +138,8 @@ class ImageProcessingService {
       final image = img.decodeImage(imageData);
       if (image == null) throw Exception('Failed to decode image');
 
-      // Detect edges
-      final grayscale = img.grayscale(image);
-      final blurred = img.gaussianBlur(grayscale, radius: 2);
-      final edges = img.cannyEdgeDetection(blurred);
-
-      // Find contours and get bounding box
-      // Simplified: just crop to content area
-      final cropped = img.copyCrop(
-        image,
-        x: 10,
-        y: 10,
-        width: image.width - 20,
-        height: image.height - 20,
-      );
+      // 自动裁剪：移除边缘空白区域
+      final cropped = img.trim(image);
 
       return Uint8List.fromList(img.encodeJpg(cropped, quality: 90));
     } catch (e) {

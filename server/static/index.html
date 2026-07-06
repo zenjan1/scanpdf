@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScanPDF - 智能扫描办公</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #1a73e8;
+            --primary-dark: #0d47a1;
+            --primary-light: #4da3ff;
+            --accent: #00bfa5;
+            --bg: #f5f7fa;
+            --card-bg: #ffffff;
+            --text: #1a1a2e;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            padding: 80px 0 60px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3em;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .hero .subtitle {
+            font-size: 1.3em;
+            opacity: 0.9;
+            margin-bottom: 32px;
+        }
+
+        .hero .version {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-bottom: 24px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 32px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: white;
+            color: var(--primary);
+        }
+
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.4);
+        }
+
+        .btn-secondary:hover { background: rgba(255,255,255,0.25); }
+
+        .btn-dark {
+            background: var(--text);
+            color: white;
+        }
+
+        .btn-dark:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.2); }
+
+        /* Features */
+        .features {
+            padding: 80px 0;
+        }
+
+        .features h2 {
+            text-align: center;
+            font-size: 2.2em;
+            margin-bottom: 16px;
+        }
+
+        .features .desc {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 48px;
+            font-size: 1.1em;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 32px;
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+        }
+
+        .feature-icon {
+            font-size: 2.5em;
+            margin-bottom: 16px;
+        }
+
+        .feature-card h3 {
+            font-size: 1.2em;
+            margin-bottom: 8px;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.95em;
+        }
+
+        /* Platforms */
+        .platforms {
+            padding: 80px 0;
+            background: white;
+        }
+
+        .platforms h2 {
+            text-align: center;
+            font-size: 2.2em;
+            margin-bottom: 16px;
+        }
+
+        .platforms .desc {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 48px;
+            font-size: 1.1em;
+        }
+
+        .platform-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .platform-card {
+            text-align: center;
+            padding: 32px 20px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            transition: all 0.3s;
+        }
+
+        .platform-card:hover {
+            border-color: var(--primary);
+            background: rgba(26, 115, 232, 0.03);
+        }
+
+        .platform-icon {
+            font-size: 3em;
+            margin-bottom: 12px;
+        }
+
+        .platform-card h3 { font-size: 1.1em; }
+        .platform-card p { color: var(--text-secondary); font-size: 0.85em; margin-top: 4px; }
+
+        /* Tech Stack */
+        .tech {
+            padding: 80px 0;
+        }
+
+        .tech h2 {
+            text-align: center;
+            font-size: 2.2em;
+            margin-bottom: 48px;
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .tech-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 28px;
+            border: 1px solid var(--border);
+        }
+
+        .tech-card h3 {
+            color: var(--primary);
+            margin-bottom: 12px;
+        }
+
+        .tech-card ul {
+            list-style: none;
+        }
+
+        .tech-card li {
+            padding: 4px 0;
+            color: var(--text-secondary);
+            font-size: 0.95em;
+        }
+
+        .tech-card li::before {
+            content: "✓ ";
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        /* API Section */
+        .api-section {
+            padding: 60px 0;
+            background: var(--text);
+            color: white;
+            text-align: center;
+        }
+
+        .api-section h2 {
+            font-size: 2em;
+            margin-bottom: 16px;
+        }
+
+        .api-section p {
+            opacity: 0.8;
+            margin-bottom: 32px;
+        }
+
+        .api-endpoints {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 32px;
+        }
+
+        .endpoint {
+            background: rgba(255,255,255,0.1);
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        /* Footer */
+        footer {
+            padding: 40px 0;
+            text-align: center;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--border);
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2em; }
+            .hero .subtitle { font-size: 1em; }
+            .features, .platforms, .tech { padding: 48px 0; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="container">
+        <div class="version">v1.0.0 · 开源免费</div>
+        <h1>📄 ScanPDF</h1>
+        <p class="subtitle">智能扫描办公 · 让纸质文档数字化</p>
+        <p style="max-width: 600px; margin: 0 auto; opacity: 0.85;">
+            类似扫描全能王的专业文档扫描应用，支持自动边缘检测、透视矫正、OCR 文字识别、PDF 生成，多平台覆盖。
+        </p>
+        <div class="btn-group">
+            <a href="#download" class="btn btn-primary">⬇️ 下载应用</a>
+            <a href="/api/v1/docs" class="btn btn-secondary">📡 API 文档</a>
+            <a href="https://github.com/zenjan1/scanpdf" class="btn btn-secondary">⭐ GitHub 源码</a>
+        </div>
+    </div>
+</section>
+
+<!-- Features -->
+<section class="features">
+    <div class="container">
+        <h2>✨ 核心功能</h2>
+        <p class="desc">专业级文档扫描，隐私优先，离线可用</p>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📸</div>
+                <h3>智能扫描</h3>
+                <p>自动边缘检测、透视矫正，拍摄文档自动裁剪为平整的扫描件，效果媲美专业扫描仪。</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔤</div>
+                <h3>OCR 文字识别</h3>
+                <p>支持中文、英文、日文、韩文等多语言文字识别，生成可搜索的 PDF 文档。</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎨</div>
+                <h3>图像增强</h3>
+                <p>多种滤镜：灰度、黑白、魔法增强，自动去阴影、提高对比度、锐化文字。</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📑</div>
+                <h3>PDF 生成</h3>
+                <p>多页合并、自定义页面大小、可搜索 PDF（含 OCR 文字层）、高质量输出。</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📁</div>
+                <h3>文档管理</h3>
+                <p>标签分类、快速搜索、收藏标记、本地存储 + 云端同步，数据尽在掌握。</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3>隐私保护</h3>
+                <p>本地优先架构，数据加密存储，无广告无追踪，完全掌控您的文档数据。</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Platforms -->
+<section class="platforms" id="download">
+    <div class="container">
+        <h2>📱 多平台支持</h2>
+        <p class="desc">一套代码，覆盖主流移动和桌面平台</p>
+        <div class="platform-grid">
+            <div class="platform-card">
+                <div class="platform-icon">🤖</div>
+                <h3>Android</h3>
+                <p>APK 直接安装</p>
+                <a href="https://github.com/zenjan1/scanpdf/releases" class="btn btn-dark" style="margin-top:12px; padding:8px 20px; font-size:0.85em;">下载 APK</a>
+            </div>
+            <div class="platform-card">
+                <div class="platform-icon">📱</div>
+                <h3>HarmonyOS</h3>
+                <p>华为鸿蒙原生</p>
+                <a href="https://github.com/zenjan1/scanpdf/releases" class="btn btn-dark" style="margin-top:12px; padding:8px 20px; font-size:0.85em;">下载 HAP</a>
+            </div>
+            <div class="platform-card">
+                <div class="platform-icon">🍎</div>
+                <h3>iOS</h3>
+                <p>iPhone / iPad</p>
+                <a href="https://github.com/zenjan1/scanpdf/releases" class="btn btn-dark" style="margin-top:12px; padding:8px 20px; font-size:0.85em;">即将上线</a>
+            </div>
+            <div class="platform-card">
+                <div class="platform-icon">💻</div>
+                <h3>macOS</h3>
+                <p>原生桌面应用</p>
+                <a href="https://github.com/zenjan1/scanpdf/releases" class="btn btn-dark" style="margin-top:12px; padding:8px 20px; font-size:0.85em;">即将上线</a>
+            </div>
+        </div>
+        <div style="text-align: center;">
+            <p style="color: var(--text-secondary); margin-bottom: 16px;">也可以通过源码自行编译</p>
+            <a href="https://github.com/zenjan1/scanpdf" class="btn btn-dark">📦 获取源码</a>
+        </div>
+    </div>
+</section>
+
+<!-- Tech Stack -->
+<section class="tech">
+    <div class="container">
+        <h2>🛠️ 技术架构</h2>
+        <div class="tech-grid">
+            <div class="tech-card">
+                <h3>📱 客户端</h3>
+                <ul>
+                    <li>Flutter 3.10+ 跨平台框架</li>
+                    <li>BLoC 状态管理</li>
+                    <li>Google ML Kit OCR</li>
+                    <li>OpenCV 图像处理</li>
+                    <li>SQLite 本地数据库</li>
+                    <li>Dio HTTP 客户端</li>
+                </ul>
+            </div>
+            <div class="tech-card">
+                <h3>🖥️ 服务端</h3>
+                <ul>
+                    <li>FastAPI 高性能框架</li>
+                    <li>PostgreSQL 主数据库</li>
+                    <li>Redis 缓存</li>
+                    <li>Tesseract OCR</li>
+                    <li>OpenCV 服务端处理</li>
+                    <li>ReportLab PDF 生成</li>
+                </ul>
+            </div>
+            <div class="tech-card">
+                <h3>🚀 部署</h3>
+                <ul>
+                    <li>Docker + Docker Compose</li>
+                    <li>Nginx 反向代理</li>
+                    <li>Let's Encrypt SSL</li>
+                    <li>一键部署脚本</li>
+                    <li>自动证书续期</li>
+                    <li>健康检查监控</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- API Section -->
+<section class="api-section">
+    <div class="container">
+        <h2>📡 RESTful API</h2>
+        <p>完整的后端 API，支持文档管理、OCR、扫描处理</p>
+        <div class="api-endpoints">
+            <span class="endpoint">GET /api/v1/documents</span>
+            <span class="endpoint">POST /api/v1/documents</span>
+            <span class="endpoint">POST /api/v1/ocr/extract</span>
+            <span class="endpoint">POST /api/v1/scan/detect-edges</span>
+            <span class="endpoint">POST /api/v1/scan/enhance</span>
+            <span class="endpoint">POST /api/v1/auth/login</span>
+        </div>
+        <a href="/api/v1/docs" class="btn btn-primary">查看完整 API 文档 →</a>
+    </div>
+</section>
+
+<!-- Source Code -->
+<section class="features" style="padding-bottom: 40px;">
+    <div class="container" style="text-align: center;">
+        <h2>🌟 开源贡献</h2>
+        <p class="desc">MIT 开源协议，欢迎 Star、Fork、PR</p>
+        <div class="btn-group" style="margin-bottom: 32px;">
+            <a href="https://github.com/zenjan1/scanpdf" class="btn btn-dark">⭐ GitHub 仓库</a>
+            <a href="https://github.com/zenjan1/scanpdf/issues" class="btn btn-secondary" style="border-color: var(--border); color: var(--text);">🐛 反馈问题</a>
+            <a href="https://github.com/zenjan1/scanpdf/blob/master/README.md" class="btn btn-secondary" style="border-color: var(--border); color: var(--text);">📖 阅读文档</a>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer>
+    <div class="container">
+        <p style="margin-bottom: 8px;">
+            <strong>ScanPDF</strong> — 智能扫描办公 · 让纸质文档数字化
+        </p>
+        <p>
+            源码：<a href="https://github.com/zenjan1/scanpdf">github.com/zenjan1/scanpdf</a> ·
+            API：<a href="/api/v1/docs">jp.zenjan.store/api/v1/docs</a>
+        </p>
+        <p style="margin-top: 8px; font-size: 0.85em;">
+            © 2026 ScanPDF · MIT License · Built with ❤️
+        </p>
+    </div>
+</footer>
+
+</body>
+</html>

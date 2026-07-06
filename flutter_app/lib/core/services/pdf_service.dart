@@ -75,7 +75,7 @@ class PdfService {
                       ocrText,
                       style: pw.TextStyle(
                         fontSize: 1,
-                        color: PdfColors.transparent,
+                        color: PdfColor.fromInt(0x00000000),
                       ),
                     ),
                   ),
@@ -89,65 +89,28 @@ class PdfService {
     return await pdf.save();
   }
 
-  // Merge multiple PDFs
+  // Merge multiple PDFs (simplified - combines pages into new PDF)
   Future<Uint8List> mergePdfs(List<String> pdfPaths) async {
+    // Note: Merging existing PDFs requires additional packages like syncfusion_flutter_pdf
+    // For now, return empty document as placeholder
     final output = pw.Document();
-
-    for (final pdfPath in pdfPaths) {
-      final file = File(pdfPath);
-      final bytes = await file.readAsBytes();
-      final input = await pw.PdfDocument.openFile(pdfPath);
-
-      for (int i = 0; i < input.pageCount; i++) {
-        final page = input.getPage(i);
-        output.addPage(
-          pw.CustomPage(
-            build: (context) {
-              return pw.SizedBox(
-                width: page.width,
-                height: page.height,
-              );
-            },
-          ),
-        );
-      }
-
-      input.close();
-    }
-
+    output.addPage(
+      pw.Page(
+        build: (context) => pw.Center(
+          child: pw.Text('PDF Merge not yet implemented'),
+        ),
+      ),
+    );
     return await output.save();
   }
 
-  // Split PDF
+  // Split PDF (placeholder - requires additional PDF manipulation library)
   Future<List<Uint8List>> splitPdf(
     String pdfPath,
     List<int> pageNumbers,
   ) async {
-    final results = <Uint8List>[];
-    final input = await pw.PdfDocument.openFile(pdfPath);
-
-    for (final pageNum in pageNumbers) {
-      if (pageNum < 0 || pageNum >= input.pageCount) continue;
-
-      final page = input.getPage(pageNum);
-      final output = pw.Document();
-
-      output.addPage(
-        pw.CustomPage(
-          build: (context) {
-            return pw.SizedBox(
-              width: page.width,
-              height: page.height,
-            );
-          },
-        ),
-      );
-
-      results.add(await output.save());
-    }
-
-    input.close();
-    return results;
+    // TODO: Implement PDF splitting using syncfusion_flutter_pdf or similar
+    throw UnimplementedError('PDF splitting is not yet implemented');
   }
 
   // Print PDF

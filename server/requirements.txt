@@ -12,7 +12,8 @@ alembic==1.13.0
 
 # 安全认证
 python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
+passlib==1.7.4
+bcrypt==4.0.1
 
 # OCR 和图像处理
 pillow==10.1.0

@@ -5,8 +5,8 @@ from app.core.config.database import engine, Base
 from app.core.middleware.logging import LoggingMiddleware
 from app.api.v1 import documents, auth, ocr, scan
 
-# 创建数据库表
-Base.metadata.create_all(bind=engine)
+# 创建数据库表（仅在不存在时创建）
+Base.metadata.create_all(bind=engine, checkfirst=True)
 
 app = FastAPI(
     title=settings.APP_NAME,

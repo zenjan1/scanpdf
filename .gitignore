@@ -157,3 +157,28 @@ postgres_data/
 *.bak
 *.swp
 *.tmp
+
+# Fonts build artifacts
+flutter_app/assets/fonts/.dart_tool/
+flutter_app/assets/fonts/.idea/
+flutter_app/assets/fonts/build/
+flutter_app/assets/fonts/.flutter-plugins
+flutter_app/assets/fonts/.flutter-plugins-dependencies
+flutter_app/assets/fonts/.metadata
+flutter_app/assets/fonts/pubspec.lock
+
+# Qwen
+.qwen/
+
+# Empty asset dirs (add actual files when needed)
+flutter_app/assets/icons/
+flutter_app/assets/images/
+flutter_app/assets/fonts/
+flutter_app/assets/fonts/android/
+flutter_app/assets/fonts/linux/
+flutter_app/assets/fonts/test/
+flutter_app/assets/fonts/lib/
+flutter_app/assets/fonts/fonts.iml
+flutter_app/assets/fonts/analysis_options.yaml
+flutter_app/assets/fonts/pubspec.*
+flutter_app/assets/fonts/README.md

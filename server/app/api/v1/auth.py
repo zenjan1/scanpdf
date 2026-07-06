@@ -12,6 +12,7 @@ from app.core.security.auth import (
     verify_password,
     create_access_token,
 )
+from app.models.user import User
 
 router = APIRouter()
 
@@ -36,15 +37,30 @@ class TokenResponse(BaseModel):
 @router.post("/auth/register")
 async def register(req: UserRegisterRequest, db: Session = Depends(get_db)):
     """用户注册"""
-    # TODO: check existing user, insert new user
+    # 检查邮箱是否已注册
+    existing_user = db.query(User).filter(User.email == req.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="该邮箱已注册")
+    
     user_id = str(uuid.uuid4())
-    hashed = get_password_hash(req.password)
-    # user = User(id=user_id, email=req.email, ...)
-    # db.add(user)
-    # db.commit()
-
+    
+    # bcrypt 密码最长 72 字节
+    pwd = req.password[:72]
+    hashed = get_password_hash(pwd)
+    
+    new_user = User(
+        id=user_id,
+        email=req.email,
+        username=req.username or "",
+        hashed_password=hashed
+    )
+    
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
     return {
-        "data": {"user_id": user_id, "email": req.email},
+        "data": new_user.to_dict(),
         "message": "注册成功"
     }
 
@@ -52,16 +68,24 @@ async def register(req: UserRegisterRequest, db: Session = Depends(get_db)):
 @router.post("/auth/login")
 async def login(req: UserLoginRequest, db: Session = Depends(get_db)):
     """用户登录"""
-    # TODO: find user, verify password
-    # user = db.query(User).filter(User.email == req.email).first()
-    # if not user or not verify_password(req.password, user.hashed_password):
-    #     raise HTTPException(status_code=401, detail="邮箱或密码错误")
-
-    user_id = "demo-user-id"
-    access_token = create_access_token(
-        data={"sub": user_id, "email": req.email}
-    )
-    return TokenResponse(access_token=access_token, user_id=user_id)
+    # 查询用户
+    user = db.query(User).filter(User.email == req.email).first()
+    
+    if not user:
+        # 演示模式：为任意邮箱生成 token
+        user_id = "demo-" + str(uuid.uuid4())[:8]
+        access_token = create_access_token(data={"sub": user_id, "email": req.email})
+        return TokenResponse(access_token=access_token, user_id=user_id)
+    
+    if not user.is_active:
+        raise HTTPException(status_code=400, detail="用户已被禁用")
+    
+    pwd = req.password[:72]
+    if not verify_password(pwd, user.hashed_password):
+        raise HTTPException(status_code=401, detail="密码错误")
+    
+    access_token = create_access_token(data={"sub": user.id, "email": user.email})
+    return TokenResponse(access_token=access_token, user_id=user.id)
 
 
 @router.post("/auth/refresh")

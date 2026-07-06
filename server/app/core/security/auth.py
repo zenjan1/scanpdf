@@ -7,6 +7,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.core.config.settings import settings
 from app.core.config.database import get_db
+from app.models.user import User
 
 
 # 密码加密上下文
@@ -74,7 +75,7 @@ def decode_token(token: str) -> dict:
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
-):
+) -> User:
     """
     获取当前用户（依赖注入）
     
@@ -95,12 +96,17 @@ async def get_current_user(
             detail="Invalid authentication credentials"
         )
     
-    # TODO: 从数据库查询用户
-    # user = db.query(User).filter(User.id == user_id).first()
-    # if user is None:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_401_UNAUTHORIZED,
-    #         detail="User not found"
-    #     )
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
     
-    return {"id": user_id, "email": payload.get("email", "")}
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Inactive user"
+        )
+    
+    return user

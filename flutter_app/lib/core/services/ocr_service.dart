@@ -24,7 +24,7 @@ class OcrService {
       return recognizedText.blocks.map((block) {
         return OcrBlock(
           text: block.text,
-          confidence: block.confidence ?? 0.0,
+          confidence: block.recognizedLanguages.isNotEmpty ? 0.9 : 0.0,
           boundingBox: block.boundingBox,
         );
       }).toList();

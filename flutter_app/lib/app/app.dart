@@ -36,7 +36,7 @@ class ScanPdfApp extends StatelessWidget {
     );
   }
 
-  final _router = GoRouter(
+  GoRouter get _router => GoRouter(
     initialLocation: '/',
     routes: [
       GoRoute(
@@ -49,11 +49,11 @@ class ScanPdfApp extends StatelessWidget {
       ),
       GoRoute(
         path: '/scan',
-        builder: (context, state) => const ScannerScreen(),
+        builder: (context, state) => const ScannerScreen(params: {}),
       ),
       GoRoute(
         path: '/ocr',
-        builder: (context, state) => const OcrScreen(),
+        builder: (context, state) => OcrScreen(imagePath: state.extra as String? ?? ''),
       ),
       GoRoute(
         path: '/settings',
