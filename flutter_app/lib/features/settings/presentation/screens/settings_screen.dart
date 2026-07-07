@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:scanpdf/core/theme/app_colors.dart';
 import 'package:scanpdf/core/services/storage_service.dart';
-import 'package:scanpdf/core/services/network_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Settings screen for app configuration
@@ -14,7 +13,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final StorageService _storageService = StorageService();
-  final NetworkService _networkService = NetworkService();
   bool _autoEnhance = true;
   bool _autoSave = true;
   bool _cloudSync = false;
@@ -180,13 +178,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: '清除缓存',
             subtitle: '释放存储空间',
             onTap: () async {
+              final messenger = ScaffoldMessenger.of(context);
               await _storageService.clearCache();
               await _loadStorageSize();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('缓存已清除')),
-                );
-              }
+              if (!mounted) return;
+              messenger.showSnackBar(
+                const SnackBar(content: Text('缓存已清除')),
+              );
             },
           ),
 
@@ -557,9 +555,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           TextButton(
             onPressed: () async {
-              setState(() => _serverUrl = controller.text);
-              await _saveSetting('serverUrl', controller.text);
+              final url = controller.text;
+              setState(() => _serverUrl = url);
               Navigator.pop(context);
+              await _saveSetting('serverUrl', url);
             },
             child: const Text('确定'),
           ),

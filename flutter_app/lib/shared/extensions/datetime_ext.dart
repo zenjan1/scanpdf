@@ -1,4 +1,3 @@
-import 'package:intl/intl.dart';
 import 'package:scanpdf/core/utils/date_format.dart';
 
 extension DateTimeExtension on DateTime {

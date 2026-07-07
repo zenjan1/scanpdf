@@ -18,11 +18,6 @@ linter:
     prefer_single_quotes: true
     sort_child_properties_last: true
     unnecessary_statements: true
-    
-    # 类型安全
-    strict_casts: true
-    strict_inference: true
-    strict_raw_type: true
 
 analyzer:
   exclude:

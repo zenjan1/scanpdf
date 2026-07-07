@@ -85,10 +85,10 @@ class DocumentRepositoryImpl implements DocumentRepository {
           orElse: () => Document(
             id: '',
             title: '',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
+            createdAt: DateTime(1970),
+            updatedAt: DateTime(1970),
             pageCount: 0,
-            tags: [],
+            tags: const [],
             filePath: '',
           ),
         );

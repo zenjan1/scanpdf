@@ -1,41 +1,39 @@
 import { AbilityConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
-import { flutterApplication } from '@ohos/flutter_ohos';
+import { FlutterAbility } from '@ohos/flutter_ohos';
 
 const DOMAIN = 0x0000;
+const TAG = 'EntryAbility';
 
-/**
- * ScanPDF 鸿蒙入口 Ability
- */
-export default class EntryAbility extends UIAbility {
+export default class EntryAbility extends FlutterAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
-    hilog.info(DOMAIN, 'ScanPDF', 'EntryAbility onCreate');
-    // Flutter 初始化
-    flutterApplication.instance.onCreate(this.context, want, launchParam);
+    hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onCreate');
+    super.onCreate(want, launchParam);
   }
 
   onDestroy(): void {
-    hilog.info(DOMAIN, 'ScanPDF', 'EntryAbility onDestroy');
-    flutterApplication.instance.onDestroy();
+    hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onDestroy');
+    super.onDestroy();
   }
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
-    hilog.info(DOMAIN, 'ScanPDF', 'EntryAbility onWindowStageCreate');
-    // Flutter 窗口创建
-    flutterApplication.instance.onWindowStageCreate(windowStage, this.context);
+    hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onWindowStageCreate');
+    super.onWindowStageCreate(windowStage);
   }
 
   onWindowStageDestroy(): void {
-    hilog.info(DOMAIN, 'ScanPDF', 'EntryAbility onWindowStageDestroy');
-    flutterApplication.instance.onWindowStageDestroy();
+    hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onWindowStageDestroy');
+    super.onWindowStageDestroy();
   }
 
   onForeground(): void {
-    hilog.info(DOMAIN, 'ScanPDF', 'EntryAbility onForeground');
+    hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onForeground');
+    super.onForeground();
   }
 
   onBackground(): void {
-    hilog.info(DOMAIN, 'ScanPDF', 'EntryAbility onBackground');
+    hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onBackground');
+    super.onBackground();
   }
 }

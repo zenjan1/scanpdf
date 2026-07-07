@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
 
 class StorageService {
@@ -49,12 +48,12 @@ class StorageService {
   }
 
   Future<String> generateDocumentId() async {
-    final uuid = Uuid();
+    const uuid = Uuid();
     return 'doc_${uuid.v4()}';
   }
 
   Future<String> generateImageId() async {
-    final uuid = Uuid();
+    const uuid = Uuid();
     return 'img_${uuid.v4()}';
   }
 

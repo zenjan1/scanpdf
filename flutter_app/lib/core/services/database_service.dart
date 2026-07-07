@@ -5,7 +5,7 @@ import 'package:scanpdf/features/document/domain/entities/document.dart';
 
 class DatabaseService {
   static Database? _database;
-  static final String _tableName = 'documents';
+  static const String _tableName = 'documents';
 
   Future<Database> get database async {
     if (_database != null) return _database!;

@@ -2,9 +2,12 @@
   "module": {
     "name": "entry",
     "type": "entry",
-    "description": "ScanPDF 智能扫描办公",
+    "description": "$string:module_desc",
     "mainElement": "EntryAbility",
-    "deviceTypes": ["phone", "tablet"],
+    "deviceTypes": [
+      "phone",
+      "tablet"
+    ],
     "deliveryWithInstall": true,
     "installationFree": false,
     "pages": "$profile:main_pages",
@@ -12,44 +15,38 @@
       {
         "name": "EntryAbility",
         "srcEntry": "./ets/entryability/EntryAbility.ets",
-        "description": "ScanPDF Entry Ability",
-        "icon": "$media:icon",
-        "label": "$string:EntryAbility_label",
-        "startWindowIcon": "$media:startIcon",
+        "type": "page",
+        "launcherShortcut": true,
+        "startWindowIcon": "$media:app_icon",
         "startWindowBackground": "$color:start_window_background",
         "exported": true,
         "skills": [
           {
-            "entities": ["entity.system.home"],
-            "actions": ["action.system.home"]
+            "entities": [
+              "entity.system.home"
+            ],
+            "actions": [
+              "action.system.home"
+            ]
           }
         ]
       }
     ],
     "requestPermissions": [
       {
-        "name": "ohos.permission.CAMERA",
-        "reason": "$string:camera_reason",
-        "usedScene": {
-          "abilities": ["EntryAbility"],
-          "when": "inuse"
-        }
+        "name": "ohos.permission.INTERNET"
       },
       {
-        "name": "ohos.permission.READ_IMAGEVIDEO",
-        "reason": "$string:media_reason",
-        "usedScene": {
-          "abilities": ["EntryAbility"],
-          "when": "inuse"
-        }
+        "name": "ohos.permission.CAMERA"
       },
       {
-        "name": "ohos.permission.INTERNET",
-        "reason": "$string:internet_reason",
-        "usedScene": {
-          "abilities": ["EntryAbility"],
-          "when": "always"
-        }
+        "name": "ohos.permission.MICROPHONE"
+      },
+      {
+        "name": "ohos.permission.READ_MEDIA"
+      },
+      {
+        "name": "ohos.permission.WRITE_MEDIA"
       }
     ]
   }

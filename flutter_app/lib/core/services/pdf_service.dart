@@ -73,7 +73,7 @@ class PdfService {
                     top: 0,
                     child: pw.Text(
                       ocrText,
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                         fontSize: 1,
                         color: PdfColor.fromInt(0x00000000),
                       ),

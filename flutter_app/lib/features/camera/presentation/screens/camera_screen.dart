@@ -22,7 +22,7 @@ class _CameraScreenState extends State<CameraScreen>
   int _currentCameraIndex = 0;
   bool _isFlashOn = false;
   bool _isBatchMode = false;
-  List<String> _capturedImages = [];
+  final List<String> _capturedImages = [];
   bool _isInitialized = false;
   late AnimationController _shutterAnimation;
   late Animation<double> _shutterScale;
@@ -100,11 +100,12 @@ class _CameraScreenState extends State<CameraScreen>
       final savedFile = File(savedPath);
       await savedFile.writeAsBytes(await xFile.readAsBytes());
 
+      if (!mounted) return;
       setState(() {
         _capturedImages.add(savedPath);
       });
 
-      if (!_isBatchMode) {
+      if (!_isBatchMode && mounted) {
         context.pushReplacement('/scan', extra: {'imagePath': savedPath});
       }
     } catch (e) {
@@ -251,22 +252,21 @@ class _CameraScreenState extends State<CameraScreen>
                             final images = await picker.pickMultiImage(
                               imageQuality: 90,
                             );
-                            if (images.isNotEmpty && mounted) {
-                              final paths = <String>[];
+                            if (images.isEmpty || !mounted) return;
+                            final paths = <String>[];
+                            final tempCtx = context;
+                            for (final img in images) {
                               final dir = await getTemporaryDirectory();
-                              for (final img in images) {
-                                final fileName =
-                                    'gallery_${DateTime.now().millisecondsSinceEpoch}_${img.name}';
-                                final savedPath = '${dir.path}/$fileName';
-                                await File(savedPath).writeAsBytes(await img.readAsBytes());
-                                paths.add(savedPath);
-                              }
-                              if (mounted) {
-                                context.pushReplacement('/scan', extra: {
-                                  'imagePaths': paths,
-                                });
-                              }
+                              final fileName =
+                                  'gallery_${DateTime.now().millisecondsSinceEpoch}_${img.name}';
+                              final savedPath = '${dir.path}/$fileName';
+                              await File(savedPath).writeAsBytes(await img.readAsBytes());
+                              paths.add(savedPath);
                             }
+                            if (!tempCtx.mounted) return;
+                            tempCtx.pushReplacement('/scan', extra: {
+                              'imagePaths': paths,
+                            });
                           },
                         ),
 
