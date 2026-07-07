@@ -20,15 +20,20 @@ android {
 
     defaultConfig {
         applicationId = "com.scanpdf.app"
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 23
+        targetSdk = 31
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
+        }
     }
 
     buildTypes {
         release {
             signingConfig = signingConfigs.debug
+            minifyEnabled false
+            shrinkResources false
         }
     }
 }
