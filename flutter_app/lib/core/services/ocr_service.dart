@@ -450,11 +450,6 @@ class OcrService {
     );
   }
 
-  double _safeConfidence(double? conf) {
-    if (conf == null || conf < 0 || conf > 1) return 0.0;
-    return conf;
-  }
-
   // ─── 缓存管理 ───
 
   void _addToCache(String key, OcrResult result) {
