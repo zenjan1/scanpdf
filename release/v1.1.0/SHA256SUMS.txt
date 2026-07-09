@@ -1,0 +1,2 @@
+3620e28c0997ed08feee9140e42d85f290dfff9bf12438b0a7b744cb7b2b3b45  /home/a/scanpdf/release/v1.1.0/scanpdf-v1.1.0-android.apk
+0cef7c8a68c56e6fdad5b815fb9197e19882cefa646fb947e1b06867bbc242df  /home/a/scanpdf/release/v1.1.0/scanpdf-v1.1.0-linux-x64.tar.gz

@@ -1,7 +1,11 @@
 import 'package:scanpdf/features/document/domain/entities/document.dart';
 
 abstract class DocumentRepository {
-  Future<List<Document>> getAllDocuments();
+  Future<List<Document>> getAllDocuments({
+    bool? favoriteOnly,
+    String? sortBy,
+    bool ascending = false,
+  });
   Future<List<Document>> searchDocuments(String query);
   Future<void> createDocument(Document document);
   Future<void> updateDocument(Document document);

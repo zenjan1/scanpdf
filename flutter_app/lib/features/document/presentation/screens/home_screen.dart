@@ -21,11 +21,75 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   int _currentIndex = 0;
+  bool _showOnlyFavorites = false;
+  String _sortBy = 'updatedAt'; // updatedAt, title, createdAt
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _toggleFavoritesFilter() {
+    setState(() {
+      _showOnlyFavorites = !_showOnlyFavorites;
+    });
+    context.read<DocumentBloc>().add(LoadDocumentsEvent(
+      favoriteOnly: _showOnlyFavorites,
+      sortBy: _sortBy,
+    ));
+  }
+
+  void _showSortOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.access_time, color: AppColors.primary),
+              title: const Text('按更新时间排序'),
+              trailing: _sortBy == 'updatedAt' ? const Icon(Icons.check, color: AppColors.primary) : null,
+              onTap: () {
+                setState(() => _sortBy = 'updatedAt');
+                Navigator.pop(context);
+                context.read<DocumentBloc>().add(LoadDocumentsEvent(
+                  favoriteOnly: _showOnlyFavorites,
+                  sortBy: _sortBy,
+                ));
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.title, color: AppColors.primary),
+              title: const Text('按标题排序'),
+              trailing: _sortBy == 'title' ? const Icon(Icons.check, color: AppColors.primary) : null,
+              onTap: () {
+                setState(() => _sortBy = 'title');
+                Navigator.pop(context);
+                context.read<DocumentBloc>().add(LoadDocumentsEvent(
+                  favoriteOnly: _showOnlyFavorites,
+                  sortBy: _sortBy,
+                ));
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.calendar_today, color: AppColors.primary),
+              title: const Text('按创建时间排序'),
+              trailing: _sortBy == 'createdAt' ? const Icon(Icons.check, color: AppColors.primary) : null,
+              onTap: () {
+                setState(() => _sortBy = 'createdAt');
+                Navigator.pop(context);
+                context.read<DocumentBloc>().add(LoadDocumentsEvent(
+                  favoriteOnly: _showOnlyFavorites,
+                  sortBy: _sortBy,
+                ));
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -37,6 +101,19 @@ class _HomeScreenState extends State<HomeScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              _showOnlyFavorites ? Icons.star : Icons.star_border,
+              color: _showOnlyFavorites ? Colors.amber : null,
+            ),
+            tooltip: _showOnlyFavorites ? '显示全部' : '仅显示收藏',
+            onPressed: _toggleFavoritesFilter,
+          ),
+          IconButton(
+            icon: const Icon(Icons.sort),
+            tooltip: '排序',
+            onPressed: _showSortOptions,
+          ),
           IconButton(
             icon: const Icon(Icons.cloud_upload_outlined),
             onPressed: () {
@@ -204,17 +281,28 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: (index) {
           setState(() => _currentIndex = index);
           switch (index) {
-            case 0:
-              context.read<DocumentBloc>().add(LoadDocumentsEvent());
+            case 0: // 首页
+              setState(() => _showOnlyFavorites = false);
+              context.read<DocumentBloc>().add(LoadDocumentsEvent(
+                favoriteOnly: false,
+                sortBy: _sortBy,
+              ));
               break;
-            case 1:
-              // Documents tab - already showing
+            case 1: // 文档
+              setState(() => _showOnlyFavorites = false);
+              context.read<DocumentBloc>().add(LoadDocumentsEvent(
+                favoriteOnly: false,
+                sortBy: _sortBy,
+              ));
               break;
-            case 2:
-              // Favorites tab - load all then filter client-side
-              context.read<DocumentBloc>().add(LoadDocumentsEvent());
+            case 2: // 收藏
+              setState(() => _showOnlyFavorites = true);
+              context.read<DocumentBloc>().add(LoadDocumentsEvent(
+                favoriteOnly: true,
+                sortBy: _sortBy,
+              ));
               break;
-            case 3:
+            case 3: // 我的
               context.push('/settings');
               break;
           }

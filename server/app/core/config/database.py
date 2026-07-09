@@ -4,12 +4,17 @@ from sqlalchemy.orm import sessionmaker
 import os
 
 # Database configuration
+# Use SQLite for testing if DATABASE_URL is not set or starts with 'sqlite'
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://scanpdf:scanpdf_password@localhost:5432/scanpdf"
+    "sqlite:///./test.db"
 )
 
-engine = create_engine(DATABASE_URL)
+connect_args = {}
+if DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

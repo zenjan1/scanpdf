@@ -4,10 +4,23 @@ abstract class DocumentEvent extends Equatable {
   const DocumentEvent();
 
   @override
-  List<Object> get props => [];
+  List<Object?> get props => [];
 }
 
-class LoadDocumentsEvent extends DocumentEvent {}
+class LoadDocumentsEvent extends DocumentEvent {
+  final bool? favoriteOnly;
+  final String? sortBy;
+  final bool ascending;
+
+  const LoadDocumentsEvent({
+    this.favoriteOnly,
+    this.sortBy,
+    this.ascending = false,
+  });
+
+  @override
+  List<Object?> get props => [favoriteOnly, sortBy, ascending];
+}
 
 class CreateDocumentEvent extends DocumentEvent {
   final Document document;

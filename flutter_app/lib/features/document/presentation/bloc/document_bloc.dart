@@ -25,7 +25,11 @@ class DocumentBloc extends Bloc<DocumentEvent, DocumentState> {
   ) async {
     emit(DocumentLoading());
     try {
-      final documents = await repository.getAllDocuments();
+      final documents = await repository.getAllDocuments(
+        favoriteOnly: event.favoriteOnly,
+        sortBy: event.sortBy,
+        ascending: event.ascending,
+      );
       emit(DocumentLoaded(documents: documents));
     } catch (e) {
       emit(DocumentError(message: e.toString()));

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:scanpdf/core/constants/app_constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NetworkService {
   late Dio _dio;
@@ -14,12 +15,34 @@ class NetworkService {
       },
     ));
 
-    _dio.interceptors.add(
+    // 添加拦截器
+    _dio.interceptors.addAll([
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          // 自动添加 Authorization header
+          final prefs = await SharedPreferences.getInstance();
+          final token = prefs.getString('accessToken');
+          if (token != null && token.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          return handler.next(options);
+        },
+        onError: (error, handler) async {
+          // 处理 401 未授权错误
+          if (error.response?.statusCode == 401) {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.remove('isLoggedIn');
+            await prefs.remove('accessToken');
+            // 可以在这里添加导航到登录页面的逻辑
+          }
+          return handler.next(error);
+        },
+      ),
       LogInterceptor(
         requestBody: true,
         responseBody: true,
       ),
-    );
+    ]);
   }
 
   Future<Response> get(

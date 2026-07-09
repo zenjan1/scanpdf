@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:scanpdf/core/theme/app_colors.dart';
 import 'package:scanpdf/core/services/storage_service.dart';
+import 'package:scanpdf/core/services/network_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Settings screen for app configuration
@@ -13,6 +14,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final StorageService _storageService = StorageService();
+  final NetworkService _networkService = NetworkService();
   bool _autoEnhance = true;
   bool _autoSave = true;
   bool _cloudSync = false;
@@ -353,26 +355,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
 
-      // TODO: Implement actual API login
-      // For now, simulate successful login
-      await Future.delayed(const Duration(seconds: 1));
+      // Call actual API login
+      final response = await _networkService.post(
+        '/auth/login',
+        data: {
+          'email': username,
+          'password': password,
+        },
+      );
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', true);
-      await prefs.setString('username', username);
-      await prefs.setString('email', '$username@example.com');
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data['data'];
+        final accessToken = data['access_token'];
+        final userId = data['user_id'];
 
-      setState(() {
-        _isLoggedIn = true;
-        _username = username;
-        _email = '$username@example.com';
-      });
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+        await prefs.setString('username', username);
+        await prefs.setString('email', username);
+        await prefs.setString('accessToken', accessToken);
+        await prefs.setString('userId', userId);
 
-      if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('登录成功')),
-        );
+        setState(() {
+          _isLoggedIn = true;
+          _username = username;
+          _email = username;
+        });
+
+        if (mounted) {
+          Navigator.pop(context); // Close loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('登录成功')),
+          );
+        }
+      } else {
+        throw Exception('登录失败: ${response.statusCode}');
       }
     } catch (e) {
       if (mounted) {

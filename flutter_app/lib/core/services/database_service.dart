@@ -53,13 +53,33 @@ class DatabaseService {
     );
   }
 
-  Future<List<Document>> getAllDocuments() async {
+  Future<List<Document>> getAllDocuments({
+    bool? favoriteOnly,
+    String? sortBy,
+    bool ascending = false,
+  }) async {
     final db = await database;
+
+    String? where;
+    List<Object>? whereArgs;
+
+    if (favoriteOnly == true) {
+      where = 'isDeleted = ? AND isFavorite = ?';
+      whereArgs = [0, 1];
+    } else {
+      where = 'isDeleted = ?';
+      whereArgs = [0];
+    }
+
+    final orderField = sortBy ?? 'updatedAt';
+    final orderDirection = ascending ? 'ASC' : 'DESC';
+    final orderBy = '$orderField $orderDirection';
+
     final List<Map<String, dynamic>> maps = await db.query(
       _tableName,
-      where: 'isDeleted = ?',
-      whereArgs: [0],
-      orderBy: 'updatedAt DESC',
+      where: where,
+      whereArgs: whereArgs,
+      orderBy: orderBy,
     );
     return maps.map((map) => Document.fromMap(map)).toList();
   }

@@ -182,3 +182,5 @@ flutter_app/assets/fonts/fonts.iml
 flutter_app/assets/fonts/analysis_options.yaml
 flutter_app/assets/fonts/pubspec.*
 flutter_app/assets/fonts/README.md
+release/v1.1.0/*.tar.gz
+release/v1.1.0/*.apk

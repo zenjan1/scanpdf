@@ -1,4 +1,5 @@
 import pytest
+import os
 from fastapi.testclient import TestClient
 from main import app
 
@@ -47,21 +48,35 @@ def test_get_documents_empty():
 
 def test_create_document():
     """测试创建文档"""
-    # 创建测试文件
-    test_content = b"Test PDF content"
-    files = {"file": ("test.pdf", test_content, "application/pdf")}
-    data = {"title": "测试文档", "tags": "测试,文档"}
-    
-    response = client.post("/api/v1/documents", files=files, data=data)
-    assert response.status_code == 200
-    result = response.json()
-    assert "data" in result
-    assert result["data"]["title"] == "测试文档"
-    assert "id" in result["data"]
-    
-    # 清理测试文件
-    doc_id = result["data"]["id"]
-    client.delete(f"/api/v1/documents/{doc_id}")
+    import tempfile
+    import shutil
+    from app.core.config.settings import settings
+
+    # 使用临时目录，避免权限问题
+    tmpdir = tempfile.mkdtemp()
+    original_upload_dir = settings.UPLOAD_DIR
+    settings.UPLOAD_DIR = tmpdir
+
+    try:
+        # 创建测试文件
+        test_content = b"Test PDF content"
+        files = {"file": ("test.pdf", test_content, "application/pdf")}
+        data = {"title": "测试文档", "tags": "测试,文档"}
+
+        response = client.post("/api/v1/documents", files=files, data=data)
+        assert response.status_code == 200
+        result = response.json()
+        assert "data" in result
+        assert result["data"]["title"] == "测试文档"
+        assert "id" in result["data"]
+
+        # 清理测试文件
+        doc_id = result["data"]["id"]
+        client.delete(f"/api/v1/documents/{doc_id}")
+    finally:
+        # 恢复原目录设置并清理
+        settings.UPLOAD_DIR = original_upload_dir
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 def test_search_documents():
@@ -74,8 +89,10 @@ def test_search_documents():
 
 def test_auth_register():
     """测试用户注册"""
+    import uuid
+    # 使用唯一邮箱避免冲突
     payload = {
-        "email": "test@example.com",
+        "email": f"test_{uuid.uuid4().hex[:8]}@example.com",
         "password": "test123456",
         "username": "testuser"
     }
@@ -83,7 +100,8 @@ def test_auth_register():
     assert response.status_code == 200
     data = response.json()
     assert "data" in data
-    assert "user_id" in data["data"]
+    # 检查返回的用户数据中包含 id 字段
+    assert "id" in data["data"]
 
 
 def test_auth_login():

@@ -273,14 +273,8 @@ class _CameraScreenState extends State<CameraScreen>
                         // Shutter
                         GestureDetector(
                           onTap: _captureImage,
-                          child: AnimatedBuilder(
-                            animation: _shutterScale,
-                            builder: (context, child) {
-                              return Transform.scale(
-                                scale: _shutterScale.value,
-                                child: child,
-                              );
-                            },
+                          child: ScaleTransition(
+                            scale: _shutterScale,
                             child: Container(
                               width: 72,
                               height: 72,

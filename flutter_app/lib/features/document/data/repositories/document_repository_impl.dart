@@ -16,9 +16,17 @@ class DocumentRepositoryImpl implements DocumentRepository {
   });
 
   @override
-  Future<List<Document>> getAllDocuments() async {
+  Future<List<Document>> getAllDocuments({
+    bool? favoriteOnly,
+    String? sortBy,
+    bool ascending = false,
+  }) async {
     try {
-      return await localDatasource.getAllDocuments();
+      return await localDatasource.getAllDocuments(
+        favoriteOnly: favoriteOnly,
+        sortBy: sortBy,
+        ascending: ascending,
+      );
     } catch (e) {
       throw Exception('Failed to get documents: $e');
     }
