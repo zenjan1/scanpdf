@@ -425,7 +425,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     try {
-      final response = await _networkService.post(
+      await _networkService.post(
         '/auth/password-reset/request',
         data: {'email': email},
       );
@@ -575,13 +575,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               final newUrl = controller.text.trim();
               if (newUrl.isNotEmpty) {
                 setState(() => _serverUrl = newUrl);
+                final messenger = ScaffoldMessenger.of(context);
                 await _saveSetting('serverUrl', newUrl);
-                if (mounted) {
-                  Navigator.pop(dialogContext);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('服务器地址已更新')),
-                  );
-                }
+                if (!mounted) return;
+                Navigator.of(dialogContext).pop();
+                messenger.showSnackBar(
+                  const SnackBar(content: Text('服务器地址已更新')),
+                );
               }
             },
             child: const Text('保存'),

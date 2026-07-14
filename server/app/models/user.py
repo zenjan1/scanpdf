@@ -11,17 +11,21 @@ class User(Base):
     id = Column(String, primary_key=True, index=True)
     email = Column(String, nullable=False, unique=True, index=True)
     username = Column(String, nullable=True)
+    avatar_url = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     is_active = Column(Boolean, default=True)
+    is_deleted = Column(Boolean, default=False)
 
     def to_dict(self):
         return {
             "id": self.id,
             "email": self.email,
             "username": self.username,
+            "avatar_url": self.avatar_url,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "is_active": self.is_active,
+            "is_deleted": self.is_deleted,
         }

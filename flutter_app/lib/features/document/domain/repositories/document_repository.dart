@@ -26,6 +26,9 @@ abstract class DocumentRepository {
   /// 切换收藏状态
   Future<void> toggleFavorite(String id, bool isFavorite);
 
+  /// 批量切换收藏状态
+  Future<void> batchToggleFavorite(List<String> ids, bool isFavorite);
+
   /// 搜索文档
   Future<List<Document>> searchDocuments(String query);
 
@@ -43,6 +46,9 @@ abstract class DocumentRepository {
     int page = 1,
     int pageSize = 20,
   });
+
+  /// 永久删除文档
+  Future<void> permanentDeleteDocument(String id);
 
   /// 获取所有标签
   Future<List<TagInfo>> getAllTags();

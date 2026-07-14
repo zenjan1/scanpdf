@@ -31,4 +31,7 @@ abstract class DocumentLocalDatasource {
 
   /// 获取回收站文档
   Future<List<Document>> getRecycleBinDocuments();
+
+  /// 永久删除文档
+  Future<void> permanentDeleteDocument(String id);
 }

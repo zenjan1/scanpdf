@@ -22,7 +22,9 @@ class DocumentBloc extends Bloc<DocumentEvent, DocumentState> {
     on<RestoreDocumentEvent>(_onRestoreDocument);
     on<EmptyRecycleBinEvent>(_onEmptyRecycleBin);
     on<LoadRecycleBinEvent>(_onLoadRecycleBin);
+    on<PermanentDeleteDocumentEvent>(_onPermanentDeleteDocument);
     on<LoadTagsEvent>(_onLoadTags);
+    on<BatchToggleFavoriteEvent>(_onBatchToggleFavorite);
   }
 
   Future<void> _onLoadDocuments(
@@ -182,6 +184,19 @@ class DocumentBloc extends Bloc<DocumentEvent, DocumentState> {
     }
   }
 
+  Future<void> _onPermanentDeleteDocument(
+    PermanentDeleteDocumentEvent event,
+    Emitter<DocumentState> emit,
+  ) async {
+    try {
+      await repository.permanentDeleteDocument(event.id);
+      emit(const DocumentOperationSuccess(message: '文档已永久删除'));
+      add(const LoadRecycleBinEvent());
+    } catch (e) {
+      emit(DocumentError(message: e.toString()));
+    }
+  }
+
   Future<void> _onLoadTags(
     LoadTagsEvent event,
     Emitter<DocumentState> emit,
@@ -189,6 +204,20 @@ class DocumentBloc extends Bloc<DocumentEvent, DocumentState> {
     try {
       final tags = await repository.getAllTags();
       emit(TagsLoaded(tags: tags));
+    } catch (e) {
+      emit(DocumentError(message: e.toString()));
+    }
+  }
+
+  Future<void> _onBatchToggleFavorite(
+    BatchToggleFavoriteEvent event,
+    Emitter<DocumentState> emit,
+  ) async {
+    try {
+      await repository.batchToggleFavorite(event.ids, event.isFavorite);
+      final action = event.isFavorite ? '收藏' : '取消收藏';
+      emit(DocumentOperationSuccess(message: '已$action ${event.ids.length} 个文档'));
+      add(const LoadDocumentsEvent());
     } catch (e) {
       emit(DocumentError(message: e.toString()));
     }

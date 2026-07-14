@@ -36,9 +36,11 @@ class _CameraScreenState extends State<CameraScreen>
   Timer? _edgeDetectionTimer;
   bool _showEdgeOverlay = true;
 
-  // Gesture cropping
-  List<Offset> _cropCorners = [];
-  bool _isCropping = false;
+  // Gesture cropping (reserved for future use)
+  // ignore: unused_field
+  final List<Offset> _cropCorners = [];
+  // ignore: unused_field
+  final bool _isCropping = false;
 
   @override
   void initState() {
@@ -196,7 +198,7 @@ class _CameraScreenState extends State<CameraScreen>
                 corners: _detectedEdges,
                 isDetecting: _isDetectingEdges,
               ),
-              child: SizedBox.expand(),
+              child: const SizedBox.expand(),
             )
           else if (_showEdgeOverlay)
             Center(

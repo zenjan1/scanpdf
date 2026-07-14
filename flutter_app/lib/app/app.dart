@@ -4,6 +4,7 @@ import 'package:scanpdf/core/theme/app_theme.dart';
 import 'package:scanpdf/core/services/service_locator.dart';
 import 'package:scanpdf/features/document/presentation/bloc/document_bloc.dart';
 import 'package:scanpdf/features/document/presentation/screens/home_screen.dart';
+import 'package:scanpdf/features/document/presentation/screens/recycle_bin_screen.dart';
 import 'package:scanpdf/features/settings/presentation/screens/settings_screen.dart';
 import 'package:scanpdf/features/camera/presentation/screens/camera_screen.dart';
 import 'package:scanpdf/features/scanner/presentation/screens/scanner_screen.dart';
@@ -56,6 +57,10 @@ class ScanPdfApp extends StatelessWidget {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/recycle-bin',
+        builder: (context, state) => const RecycleBinScreen(),
       ),
     ],
   );

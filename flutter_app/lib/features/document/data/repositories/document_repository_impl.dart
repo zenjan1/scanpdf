@@ -25,7 +25,7 @@ class DocumentRepositoryImpl implements DocumentRepository {
     int pageSize = 20,
   }) async {
     // 优先从本地获取，保证离线可用
-    final documents = await localDatasource.getAllDocuments(
+    await localDatasource.getAllDocuments(
       favoriteOnly: favoriteOnly,
       sortBy: sortBy,
       ascending: ascending,
@@ -182,6 +182,29 @@ class DocumentRepositoryImpl implements DocumentRepository {
   }
 
   @override
+  Future<void> batchToggleFavorite(List<String> ids, bool isFavorite) async {
+    for (final id in ids) {
+      await localDatasource.toggleFavorite(id, isFavorite);
+    }
+
+    if (networkService.isOnline) {
+      try {
+        for (final id in ids) {
+          await remoteDatasource.toggleFavorite(id, isFavorite);
+        }
+      } catch (e) {
+        for (final id in ids) {
+          networkService.addToOfflineQueue(
+            method: 'PUT',
+            path: '/documents/$id/favorite',
+            data: {'is_favorite': isFavorite},
+          );
+        }
+      }
+    }
+  }
+
+  @override
   Future<List<Document>> searchDocuments(String query) async {
     return await localDatasource.searchDocuments(query);
   }
@@ -248,6 +271,27 @@ class DocumentRepositoryImpl implements DocumentRepository {
       'documents': documents,
       'total': documents.length,
     };
+  }
+
+  @override
+  Future<void> permanentDeleteDocument(String id) async {
+    await localDatasource.permanentDeleteDocument(id);
+
+    if (networkService.isOnline) {
+      try {
+        await remoteDatasource.deleteDocument(id);
+      } catch (e) {
+        networkService.addToOfflineQueue(
+          method: 'DELETE',
+          path: '/documents/$id/permanent',
+        );
+      }
+    } else {
+      networkService.addToOfflineQueue(
+        method: 'DELETE',
+        path: '/documents/$id/permanent',
+      );
+    }
   }
 
   @override

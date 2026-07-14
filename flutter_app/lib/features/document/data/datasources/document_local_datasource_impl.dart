@@ -59,4 +59,9 @@ class DocumentLocalDatasourceImpl implements DocumentLocalDatasource {
   Future<List<Document>> getRecycleBinDocuments() async {
     return await database.getRecycleBinDocuments();
   }
+
+  @override
+  Future<void> permanentDeleteDocument(String id) async {
+    await database.permanentDeleteDocument(id);
+  }
 }

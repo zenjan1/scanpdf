@@ -117,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.cloud_upload_outlined),
             onPressed: () {
-              context.read<DocumentBloc>().add(SyncToCloudEvent());
+              context.read<DocumentBloc>().add(const SyncToCloudEvent());
             },
           ),
           IconButton(

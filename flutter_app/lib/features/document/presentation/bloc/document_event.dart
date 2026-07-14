@@ -102,6 +102,25 @@ class LoadRecycleBinEvent extends DocumentEvent {
   const LoadRecycleBinEvent();
 }
 
+class PermanentDeleteDocumentEvent extends DocumentEvent {
+  final String id;
+
+  const PermanentDeleteDocumentEvent(this.id);
+
+  @override
+  List<Object?> get props => [id];
+}
+
 class LoadTagsEvent extends DocumentEvent {
   const LoadTagsEvent();
+}
+
+class BatchToggleFavoriteEvent extends DocumentEvent {
+  final List<String> ids;
+  final bool isFavorite;
+
+  const BatchToggleFavoriteEvent(this.ids, this.isFavorite);
+
+  @override
+  List<Object?> get props => [ids, isFavorite];
 }
