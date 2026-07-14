@@ -8,7 +8,9 @@ import 'package:scanpdf/core/services/pdf_service.dart';
 import 'package:scanpdf/core/services/network_service.dart';
 import 'package:scanpdf/core/services/sync_service.dart';
 import 'package:scanpdf/features/document/data/datasources/document_local_datasource.dart';
+import 'package:scanpdf/features/document/data/datasources/document_local_datasource_impl.dart';
 import 'package:scanpdf/features/document/data/datasources/document_remote_datasource.dart';
+import 'package:scanpdf/features/document/data/datasources/document_remote_datasource_impl.dart';
 import 'package:scanpdf/features/document/data/repositories/document_repository_impl.dart';
 import 'package:scanpdf/features/document/domain/repositories/document_repository.dart';
 

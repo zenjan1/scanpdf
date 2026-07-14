@@ -1,8 +1,8 @@
 import 'package:scanpdf/features/document/domain/entities/document.dart';
+import 'package:scanpdf/features/document/domain/entities/tag_info.dart';
 import 'package:scanpdf/features/document/domain/repositories/document_repository.dart';
 import 'package:scanpdf/features/document/data/datasources/document_local_datasource.dart';
 import 'package:scanpdf/features/document/data/datasources/document_remote_datasource.dart';
-import 'package:scanpdf/features/document/presentation/bloc/document_state.dart';
 import 'package:scanpdf/core/services/network_service.dart';
 
 class DocumentRepositoryImpl implements DocumentRepository {

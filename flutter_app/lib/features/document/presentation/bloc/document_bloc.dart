@@ -1,6 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:scanpdf/features/document/domain/entities/document.dart';
+import 'package:scanpdf/features/document/domain/entities/tag_info.dart';
 import 'package:scanpdf/features/document/domain/repositories/document_repository.dart';
 
 part 'document_event.dart';

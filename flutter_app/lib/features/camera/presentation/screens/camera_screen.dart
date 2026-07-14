@@ -72,7 +72,7 @@ class _CameraScreenState extends State<CameraScreen>
           final bytes = await image.readAsBytes();
 
           // 检测边缘
-          final corners = await _imageProcessingService.detectEdges(bytes);
+          final corners = await _imageProcessingService.detectDocumentEdges(bytes);
 
           if (mounted) {
             setState(() {

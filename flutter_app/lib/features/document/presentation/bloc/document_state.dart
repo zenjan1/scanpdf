@@ -69,17 +69,3 @@ class DocumentOperationSuccess extends DocumentState {
   @override
   List<Object?> get props => [message];
 }
-
-class TagInfo {
-  final String name;
-  final int count;
-
-  const TagInfo({required this.name, required this.count});
-
-  factory TagInfo.fromMap(Map<String, dynamic> map) {
-    return TagInfo(
-      name: map['name'] as String,
-      count: map['count'] as int,
-    );
-  }
-}

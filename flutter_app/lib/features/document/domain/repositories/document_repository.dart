@@ -1,5 +1,5 @@
 import 'package:scanpdf/features/document/domain/entities/document.dart';
-import 'package:scanpdf/features/document/presentation/bloc/document_state.dart';
+import 'package:scanpdf/features/document/domain/entities/tag_info.dart';
 
 abstract class DocumentRepository {
   /// 获取文档列表（支持分页、排序、过滤）
