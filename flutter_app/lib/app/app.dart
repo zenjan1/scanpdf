@@ -20,7 +20,7 @@ class ScanPdfApp extends StatelessWidget {
         BlocProvider(
           create: (context) => DocumentBloc(
             repository: sl(),
-          )..add(LoadDocumentsEvent()),
+          )..add(const LoadDocumentsEvent()),
         ),
       ],
       child: MaterialApp.router(

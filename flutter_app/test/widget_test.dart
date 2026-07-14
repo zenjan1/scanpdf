@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
 import 'package:scanpdf/app/app.dart';
 import 'package:scanpdf/core/services/service_locator.dart';
 
 void main() {
-  setUpAll(() async {
-    // 初始化依赖注入
+  setUp(() async {
+    // 每个测试前初始化依赖注入
     await init();
+  });
+
+  tearDown(() async {
+    // 每个测试后清理服务实例，确保 Timer 被取消
+    await GetIt.instance.reset();
   });
 
   testWidgets('App launches successfully', (WidgetTester tester) async {

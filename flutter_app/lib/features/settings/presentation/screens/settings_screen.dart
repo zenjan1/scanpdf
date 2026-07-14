@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:scanpdf/core/theme/app_colors.dart';
 import 'package:scanpdf/core/services/storage_service.dart';
 import 'package:scanpdf/core/services/network_service.dart';
+import 'package:scanpdf/core/services/database_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Settings screen for app configuration
@@ -15,6 +16,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final StorageService _storageService = StorageService();
   final NetworkService _networkService = NetworkService();
+  final DatabaseService _databaseService = DatabaseService();
   bool _autoEnhance = true;
   bool _autoSave = true;
   bool _cloudSync = false;
@@ -26,12 +28,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoggedIn = false;
   String _username = '';
   String _email = '';
+  int _documentCount = 0;
+  int _recycleBinCount = 0;
+  int _offlineQueueSize = 0;
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
     _loadStorageSize();
+    _loadStats();
+    _checkNetworkStatus();
   }
 
   Future<void> _loadSettings() async {
@@ -53,6 +60,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadStorageSize() async {
     final size = await _storageService.getStorageSize();
     setState(() => _storageUsed = size);
+  }
+
+  Future<void> _loadStats() async {
+    final docCount = await _databaseService.getDocumentCount();
+    final recycleBinDocs = await _databaseService.getRecycleBinDocuments();
+    setState(() {
+      _documentCount = docCount;
+      _recycleBinCount = recycleBinDocs.length;
+      _offlineQueueSize = _networkService.offlineQueueSize;
+    });
+  }
+
+  Future<void> _checkNetworkStatus() async {
+    _networkService.connectivityStream.listen((isOnline) {
+      if (mounted) {
+        setState(() {});
+        _loadStats();
+      }
+    });
   }
 
   Future<void> _saveSetting(String key, dynamic value) async {
@@ -168,12 +194,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 16),
 
-          // Storage
-          _buildSectionHeader('存储'),
+          // Storage & Data
+          _buildSectionHeader('存储与数据'),
           _buildInfoTile(
             icon: Icons.storage,
             title: '已用空间',
             subtitle: _formatBytes(_storageUsed),
+          ),
+          _buildInfoTile(
+            icon: Icons.description,
+            title: '文档数量',
+            subtitle: '$_documentCount 个文档',
+          ),
+          _buildInfoTile(
+            icon: Icons.delete_outline,
+            title: '回收站',
+            subtitle: '$_recycleBinCount 个文档',
+            onTap: () => _showRecycleBinDialog(),
+          ),
+          _buildInfoTile(
+            icon: Icons.cloud_off,
+            title: '离线队列',
+            subtitle: '$_offlineQueueSize 个待同步',
+            onTap: () => _showOfflineQueueDialog(),
           ),
           _buildActionTile(
             icon: Icons.delete_sweep,
@@ -197,7 +240,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildInfoTile(
             icon: Icons.info_outline,
             title: '版本',
-            subtitle: 'v1.0.0',
+            subtitle: 'v1.1.1',
           ),
           _buildNavigationTile(
             icon: Icons.article_outlined,
@@ -300,8 +343,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             TextField(
               controller: usernameController,
               decoration: const InputDecoration(
-                labelText: '用户名',
-                prefixIcon: Icon(Icons.person),
+                labelText: '邮箱',
+                prefixIcon: Icon(Icons.email),
                 border: OutlineInputBorder(),
               ),
             ),
@@ -322,6 +365,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: () => Navigator.pop(dialogContext),
             child: const Text('取消'),
           ),
+          TextButton(
+            onPressed: () => _showPasswordResetDialog(),
+            child: const Text('忘记密码'),
+          ),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
@@ -337,16 +384,75 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _login(String username, String password) async {
-    if (username.isEmpty || password.isEmpty) {
+  void _showPasswordResetDialog() {
+    final emailController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('重置密码'),
+        content: TextField(
+          controller: emailController,
+          decoration: const InputDecoration(
+            labelText: '注册邮箱',
+            prefixIcon: Icon(Icons.email),
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await _requestPasswordReset(emailController.text);
+            },
+            child: const Text('发送重置链接'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _requestPasswordReset(String email) async {
+    if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入用户名和密码')),
+        const SnackBar(content: Text('请输入邮箱')),
       );
       return;
     }
 
     try {
-      // Show loading indicator
+      final response = await _networkService.post(
+        '/auth/password-reset/request',
+        data: {'email': email},
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('重置链接已发送到您的邮箱')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('请求失败: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _login(String email, String password) async {
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请输入邮箱和密码')),
+      );
+      return;
+    }
+
+    try {
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -355,11 +461,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
 
-      // Call actual API login
       final response = await _networkService.post(
         '/auth/login',
         data: {
-          'email': username,
+          'email': email,
           'password': password,
         },
       );
@@ -367,33 +472,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data['data'];
         final accessToken = data['access_token'];
-        final userId = data['user_id'];
+        final userId = data['user_id'] ?? data['user']?['id'];
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isLoggedIn', true);
-        await prefs.setString('username', username);
-        await prefs.setString('email', username);
+        await prefs.setString('username', email);
+        await prefs.setString('email', email);
         await prefs.setString('accessToken', accessToken);
-        await prefs.setString('userId', userId);
+        if (userId != null) {
+          await prefs.setString('userId', userId);
+        }
 
         setState(() {
           _isLoggedIn = true;
-          _username = username;
-          _email = username;
+          _username = email;
+          _email = email;
         });
 
         if (mounted) {
-          Navigator.pop(context); // Close loading dialog
+          Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('登录成功')),
           );
         }
       } else {
-        throw Exception('登录失败: ${response.statusCode}');
+        throw Exception('登录失败');
       }
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context); // Close loading dialog
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('登录失败: $e')),
         );
@@ -419,6 +526,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               await prefs.remove('isLoggedIn');
               await prefs.remove('username');
               await prefs.remove('email');
+              await prefs.remove('accessToken');
+              await prefs.remove('userId');
 
               setState(() {
                 _isLoggedIn = false;
@@ -439,6 +548,155 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _showServerUrlDialog() {
+    final controller = TextEditingController(text: _serverUrl);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('服务器地址'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'URL',
+            prefixIcon: Icon(Icons.link),
+            border: OutlineInputBorder(),
+            hintText: 'https://jp.zenjan.store',
+          ),
+          keyboardType: TextInputType.url,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newUrl = controller.text.trim();
+              if (newUrl.isNotEmpty) {
+                setState(() => _serverUrl = newUrl);
+                await _saveSetting('serverUrl', newUrl);
+                if (mounted) {
+                  Navigator.pop(dialogContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('服务器地址已更新')),
+                  );
+                }
+              }
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRecycleBinDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('回收站'),
+        content: Text('回收站中有 $_recycleBinCount 个文档。\n\n清空回收站将永久删除这些文档，此操作不可恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('关闭'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+            ),
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await _emptyRecycleBin();
+            },
+            child: const Text('清空回收站'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _emptyRecycleBin() async {
+    try {
+      await _databaseService.emptyRecycleBin();
+      await _loadStats();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('回收站已清空')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('操作失败: $e')),
+        );
+      }
+    }
+  }
+
+  void _showOfflineQueueDialog() {
+    final queue = _networkService.offlineQueue;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('离线队列'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: queue.isEmpty
+              ? const Text('没有待同步的请求')
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('共 ${queue.length} 个待同步请求'),
+                    const SizedBox(height: 8),
+                    const Text('这些操作将在恢复网络后自动同步到服务器。'),
+                    const SizedBox(height: 16),
+                    if (queue.isNotEmpty)
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          Navigator.pop(dialogContext);
+                          await _networkService.syncOfflineQueue();
+                          await _loadStats();
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('同步完成')),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.sync),
+                        label: const Text('立即同步'),
+                      ),
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(dialogContext);
+                        await _networkService.clearOfflineQueue();
+                        await _loadStats();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('离线队列已清空')),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.clear_all, color: AppColors.error),
+                      label: const Text('清空队列', style: TextStyle(color: AppColors.error)),
+                    ),
+                  ],
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSwitchTile({
     required IconData icon,
     required String title,
@@ -446,19 +704,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: SwitchListTile(
-        secondary: Icon(icon, color: AppColors.primary),
-        title: Text(title, style: const TextStyle(fontSize: 15)),
-        subtitle: subtitle != null
-            ? Text(
-                subtitle,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              )
-            : null,
+    return ListTile(
+      leading: Icon(icon, color: AppColors.primary),
+      title: Text(title),
+      subtitle: subtitle != null ? Text(subtitle) : null,
+      trailing: Switch(
         value: value,
         onChanged: onChanged,
+        activeColor: AppColors.primary,
       ),
     );
   }
@@ -470,45 +723,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required List<String> options,
     required ValueChanged<String> onChanged,
   }) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        leading: Icon(icon, color: AppColors.primary),
-        title: Text(title, style: const TextStyle(fontSize: 15)),
-        trailing: DropdownButton<String>(
-          value: value,
-          underline: const SizedBox(),
-          items: options
-              .map((opt) => DropdownMenuItem(value: opt, child: Text(opt)))
-              .toList(),
-          onChanged: (val) {
-            if (val != null) onChanged(val);
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavigationTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        leading: Icon(icon, color: AppColors.primary),
-        title: Text(title, style: const TextStyle(fontSize: 15)),
-        subtitle: subtitle.isNotEmpty
-            ? Text(
-                subtitle,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              )
-            : null,
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-        onTap: onTap,
-      ),
+    return ListTile(
+      leading: Icon(icon, color: AppColors.primary),
+      title: Text(title),
+      subtitle: Text(value),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          builder: (context) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: options.map((option) {
+                return ListTile(
+                  title: Text(option),
+                  trailing: option == value
+                      ? const Icon(Icons.check, color: AppColors.primary)
+                      : null,
+                  onTap: () {
+                    Navigator.pop(context);
+                    onChanged(option);
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -516,71 +757,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required IconData icon,
     required String title,
     required String subtitle,
+    VoidCallback? onTap,
   }) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        leading: Icon(icon, color: AppColors.primary),
-        title: Text(title, style: const TextStyle(fontSize: 15)),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-        ),
-      ),
+    return ListTile(
+      leading: Icon(icon, color: AppColors.primary),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      trailing: onTap != null
+          ? const Icon(Icons.arrow_forward_ios, size: 16)
+          : null,
+      onTap: onTap,
     );
   }
 
   Widget _buildActionTile({
     required IconData icon,
     required String title,
-    required String subtitle,
+    String? subtitle,
     required VoidCallback onTap,
   }) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        leading: Icon(icon, color: AppColors.error),
-        title: Text(title, style: const TextStyle(fontSize: 15)),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-        ),
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-        onTap: onTap,
-      ),
+    return ListTile(
+      leading: Icon(icon, color: AppColors.error),
+      title: Text(title),
+      subtitle: subtitle != null ? Text(subtitle) : null,
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      onTap: onTap,
     );
   }
 
-  void _showServerUrlDialog() {
-    final controller = TextEditingController(text: _serverUrl);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('服务器地址'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'https://jp.zenjan.store',
-            prefixIcon: Icon(Icons.dns),
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final url = controller.text;
-              setState(() => _serverUrl = url);
-              Navigator.pop(context);
-              await _saveSetting('serverUrl', url);
-            },
-            child: const Text('确定'),
-          ),
-        ],
-      ),
+  Widget _buildNavigationTile({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: AppColors.primary),
+      title: Text(title),
+      subtitle: subtitle != null && subtitle.isNotEmpty
+          ? Text(subtitle)
+          : null,
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      onTap: onTap,
     );
   }
 }

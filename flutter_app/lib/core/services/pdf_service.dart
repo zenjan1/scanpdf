@@ -111,7 +111,7 @@ class PdfService {
 
         // Add each page as an image
         for (final page in pages) {
-          final tempFile = await File('${Directory.systemTemp.path}/pdf_page_${DateTime.now().microsecondsSinceEpoch}.png');
+          final tempFile = File('${Directory.systemTemp.path}/pdf_page_${DateTime.now().microsecondsSinceEpoch}.png');
           await tempFile.writeAsBytes(await page.toPng());
           tempFiles.add(tempFile);
 
@@ -159,7 +159,7 @@ class PdfService {
         if (pageNum < 0 || pageNum >= pages.length) continue;
 
         final page = pages[pageNum];
-        final tempFile = await File('${Directory.systemTemp.path}/pdf_page_${DateTime.now().microsecondsSinceEpoch}.png');
+        final tempFile = File('${Directory.systemTemp.path}/pdf_page_${DateTime.now().microsecondsSinceEpoch}.png');
         await tempFile.writeAsBytes(await page.toPng());
 
         final singlePdf = pw.Document();

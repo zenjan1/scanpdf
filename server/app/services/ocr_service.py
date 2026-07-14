@@ -1,3 +1,4 @@
+"""OCR 服务 - 支持缓存和异步任务"""
 import pytesseract
 from PIL import Image, ImageFilter, ImageEnhance
 import cv2
@@ -7,7 +8,11 @@ from dataclasses import dataclass, field
 import os
 import time
 import math
+import hashlib
+import json
 from enum import Enum
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 
 class PreprocessMode(str, Enum):
@@ -65,12 +70,88 @@ class OcrResponse:
     detected_languages: Dict[str, float] = field(default_factory=dict)
     error: str = ""
     preprocess_mode: str = ""
+    cached: bool = False
+
+
+class OcrTaskStatus(str, Enum):
+    """OCR 任务状态"""
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+@dataclass
+class OcrTask:
+    """OCR 异步任务"""
+    task_id: str
+    image_path: str
+    status: OcrTaskStatus = OcrTaskStatus.PENDING
+    result: Optional[Dict] = None
+    progress: float = 0.0
+    created_at: float = field(default_factory=time.time)
+    completed_at: Optional[float] = None
+    error: Optional[str] = None
+
+
+class OcrCache:
+    """OCR 结果缓存"""
+    
+    def __init__(self, cache_dir: str = "/tmp/ocr_cache", max_size_mb: int = 500):
+        self.cache_dir = cache_dir
+        self.max_size_mb = max_size_mb
+        os.makedirs(cache_dir, exist_ok=True)
+        
+    def _get_cache_key(self, image_path: str, language: str, preprocess_mode: str) -> str:
+        """生成缓存键"""
+        # 使用文件内容的哈希作为缓存键
+        with open(image_path, 'rb') as f:
+            file_hash = hashlib.md5(f.read()).hexdigest()
+        key = f"{file_hash}_{language}_{preprocess_mode}"
+        return hashlib.md5(key.encode()).hexdigest()
+    
+    def get(self, cache_key: str) -> Optional[Dict]:
+        """获取缓存的 OCR 结果"""
+        cache_file = os.path.join(self.cache_dir, f"{cache_key}.json")
+        if not os.path.exists(cache_file):
+            return None
+        
+        try:
+            with open(cache_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                # 检查缓存是否过期（24 小时）
+                if time.time() - data.get('cached_at', 0) > 86400:
+                    os.remove(cache_file)
+                    return None
+                return data.get('result')
+        except Exception:
+            return None
+    
+    def set(self, cache_key: str, result: Dict):
+        """缓存 OCR 结果"""
+        cache_file = os.path.join(self.cache_dir, f"{cache_key}.json")
+        try:
+            data = {
+                'result': result,
+                'cached_at': time.time(),
+            }
+            with open(cache_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False)
+        except Exception:
+            pass
+    
+    def clear(self):
+        """清空缓存"""
+        import shutil
+        if os.path.exists(self.cache_dir):
+            shutil.rmtree(self.cache_dir)
+            os.makedirs(self.cache_dir, exist_ok=True)
 
 
 class OCRService:
     """OCR 服务 - 使用 Tesseract 进行文字识别"""
 
-    def __init__(self):
+    def __init__(self, enable_cache: bool = True):
         self.supported_languages = {
             'chi_sim': '简体中文',
             'chi_tra': '繁體中文',
@@ -93,7 +174,15 @@ class OCRService:
             'ko_eng': 'kor+eng',
             'all': 'chi_sim+eng+jpn+kor',
         }
-
+        
+        # 缓存
+        self.enable_cache = enable_cache
+        self.cache = OcrCache() if enable_cache else None
+        
+        # 异步任务
+        self.tasks: Dict[str, OcrTask] = {}
+        self.executor = ThreadPoolExecutor(max_workers=4)
+    
     async def extract_text(
         self,
         image_path: str,
@@ -119,6 +208,14 @@ class OCRService:
         preprocessed_path = image_path
 
         try:
+            # 检查缓存
+            if self.enable_cache and self.cache:
+                cache_key = self.cache._get_cache_key(image_path, language, preprocess_mode)
+                cached_result = self.cache.get(cache_key)
+                if cached_result:
+                    cached_result['cached'] = True
+                    return cached_result
+
             # 验证图片文件
             if not os.path.exists(image_path):
                 return self._error_result(f"图片文件不存在: {image_path}")
@@ -173,7 +270,7 @@ class OCRService:
 
             processing_time = time.time() - start_time
 
-            return {
+            result = {
                 'success': True,
                 'text': full_text,
                 'confidence': avg_confidence,
@@ -187,7 +284,15 @@ class OCRService:
                 'detected_languages': self._detect_languages(data),
                 'preprocess_mode': preprocess_mode,
                 'error': '',
+                'cached': False,
             }
+            
+            # 缓存结果
+            if self.enable_cache and self.cache:
+                cache_key = self.cache._get_cache_key(image_path, language, preprocess_mode)
+                self.cache.set(cache_key, result)
+
+            return result
 
         except Exception as e:
             # 清理临时文件
@@ -197,7 +302,92 @@ class OCRService:
                 except OSError:
                     pass
             return self._error_result(str(e))
-
+    
+    async def create_task(
+        self,
+        image_path: str,
+        language: str = 'chi_sim+eng',
+        preprocess: bool = True,
+        preprocess_mode: str = 'auto',
+    ) -> str:
+        """
+        创建异步 OCR 任务
+        
+        Returns:
+            任务 ID
+        """
+        task_id = hashlib.md5(f"{image_path}_{time.time()}".encode()).hexdigest()[:16]
+        
+        task = OcrTask(
+            task_id=task_id,
+            image_path=image_path,
+            status=OcrTaskStatus.PENDING,
+        )
+        self.tasks[task_id] = task
+        
+        # 提交到线程池执行
+        loop = asyncio.get_event_loop()
+        loop.run_in_executor(
+            self.executor,
+            self._execute_task,
+            task_id,
+            image_path,
+            language,
+            preprocess,
+            preprocess_mode,
+        )
+        
+        return task_id
+    
+    def _execute_task(
+        self,
+        task_id: str,
+        image_path: str,
+        language: str,
+        preprocess: bool,
+        preprocess_mode: str,
+    ):
+        """执行 OCR 任务（在线程池中运行）"""
+        task = self.tasks.get(task_id)
+        if not task:
+            return
+        
+        try:
+            task.status = OcrTaskStatus.PROCESSING
+            
+            # 运行 OCR（同步版本）
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(
+                self.extract_text(image_path, language, preprocess, preprocess_mode)
+            )
+            loop.close()
+            
+            task.result = result
+            task.status = OcrTaskStatus.COMPLETED
+            task.progress = 1.0
+            task.completed_at = time.time()
+            
+        except Exception as e:
+            task.status = OcrTaskStatus.FAILED
+            task.error = str(e)
+    
+    def get_task_status(self, task_id: str) -> Optional[Dict]:
+        """获取任务状态"""
+        task = self.tasks.get(task_id)
+        if not task:
+            return None
+        
+        return {
+            'task_id': task.task_id,
+            'status': task.status.value,
+            'progress': task.progress,
+            'result': task.result,
+            'error': task.error,
+            'created_at': task.created_at,
+            'completed_at': task.completed_at,
+        }
+    
     async def extract_text_batch(
         self,
         image_paths: List[str],
@@ -484,7 +674,7 @@ class OCRService:
             'Hangul': r'[가-힯ᄀ-ᇿ]',
             'Latin': r'[a-zA-Z]',
             'Cyrillic': r'[Ѐ-ӿ]',
-            'Arabic': r'[؀-ۿ]',
+            'Arabic': r'[-ۿ]',
             'Devanagari': r'[ऀ-ॿ]',
             'Digit': r'[0-9]',
         }
@@ -547,4 +737,5 @@ class OCRService:
             'detected_languages': {},
             'preprocess_mode': '',
             'error': error,
+            'cached': False,
         }

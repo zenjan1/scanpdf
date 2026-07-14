@@ -21,6 +21,7 @@ class DatabaseService {
       path,
       version: AppConstants.databaseVersion,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -43,6 +44,12 @@ class DatabaseService {
     ''');
   }
 
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // 添加回收站支持（isDeleted 字段已存在，无需修改）
+    }
+  }
+
   // Document Operations
   Future<int> insertDocument(Document document) async {
     final db = await database;
@@ -57,18 +64,28 @@ class DatabaseService {
     bool? favoriteOnly,
     String? sortBy,
     bool ascending = false,
+    bool includeDeleted = false,
   }) async {
     final db = await database;
 
     String? where;
     List<Object>? whereArgs;
 
-    if (favoriteOnly == true) {
-      where = 'isDeleted = ? AND isFavorite = ?';
-      whereArgs = [0, 1];
+    if (includeDeleted) {
+      // 包含已删除的文档
+      if (favoriteOnly == true) {
+        where = 'isFavorite = ?';
+        whereArgs = [1];
+      }
     } else {
-      where = 'isDeleted = ?';
-      whereArgs = [0];
+      // 默认不包含已删除的文档
+      if (favoriteOnly == true) {
+        where = 'isDeleted = ? AND isFavorite = ?';
+        whereArgs = [0, 1];
+      } else {
+        where = 'isDeleted = ?';
+        whereArgs = [0];
+      }
     }
 
     final orderField = sortBy ?? 'updatedAt';
@@ -98,17 +115,59 @@ class DatabaseService {
     final db = await database;
     return await db.update(
       _tableName,
-      {'isDeleted': 1},
+      {'isDeleted': 1, 'updatedAt': DateTime.now().millisecondsSinceEpoch},
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  Future<int> restoreDocument(String id) async {
+    final db = await database;
+    return await db.update(
+      _tableName,
+      {'isDeleted': 0, 'updatedAt': DateTime.now().millisecondsSinceEpoch},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> permanentDeleteDocument(String id) async {
+    final db = await database;
+    return await db.delete(
+      _tableName,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> emptyRecycleBin() async {
+    final db = await database;
+    return await db.delete(
+      _tableName,
+      where: 'isDeleted = ?',
+      whereArgs: [1],
+    );
+  }
+
+  Future<List<Document>> getRecycleBinDocuments() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      _tableName,
+      where: 'isDeleted = ?',
+      whereArgs: [1],
+      orderBy: 'updatedAt DESC',
+    );
+    return maps.map((map) => Document.fromMap(map)).toList();
   }
 
   Future<int> toggleFavorite(String id, bool isFavorite) async {
     final db = await database;
     return await db.update(
       _tableName,
-      {'isFavorite': isFavorite ? 1 : 0},
+      {
+        'isFavorite': isFavorite ? 1 : 0,
+        'updatedAt': DateTime.now().millisecondsSinceEpoch,
+      },
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -123,5 +182,23 @@ class DatabaseService {
       orderBy: 'updatedAt DESC',
     );
     return maps.map((map) => Document.fromMap(map)).toList();
+  }
+
+  Future<int> getDocumentCount({bool includeDeleted = false}) async {
+    final db = await database;
+    final where = includeDeleted ? null : 'isDeleted = 0';
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM $_tableName${where != null ? " WHERE $where" : ""}',
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  Future<List<String>> getAllTags() async {
+    final documents = await getAllDocuments();
+    final tags = <String>{};
+    for (final doc in documents) {
+      tags.addAll(doc.tags);
+    }
+    return tags.toList()..sort();
   }
 }

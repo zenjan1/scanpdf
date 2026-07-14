@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
@@ -5,9 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:scanpdf/core/theme/app_colors.dart';
+import 'package:scanpdf/core/services/image_processing_service.dart';
 
 /// Camera screen for capturing document photos
-/// Features: auto-focus, flash control, batch capture mode
+/// Features: auto-focus, flash control, batch capture mode, real-time edge detection
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
 
@@ -27,6 +29,17 @@ class _CameraScreenState extends State<CameraScreen>
   late AnimationController _shutterAnimation;
   late Animation<double> _shutterScale;
 
+  // Real-time edge detection
+  final ImageProcessingService _imageProcessingService = ImageProcessingService();
+  List<List<int>> _detectedEdges = [];
+  bool _isDetectingEdges = false;
+  Timer? _edgeDetectionTimer;
+  bool _showEdgeOverlay = true;
+
+  // Gesture cropping
+  List<Offset> _cropCorners = [];
+  bool _isCropping = false;
+
   @override
   void initState() {
     super.initState();
@@ -38,6 +51,45 @@ class _CameraScreenState extends State<CameraScreen>
       CurvedAnimation(parent: _shutterAnimation, curve: Curves.easeInOut),
     );
     _initializeCamera();
+    _startEdgeDetection();
+  }
+
+  // 启动实时边缘检测
+  void _startEdgeDetection() {
+    _edgeDetectionTimer = Timer.periodic(
+      const Duration(milliseconds: 500), // 每500ms检测一次
+      (_) async {
+        if (_controller == null || !_controller!.value.isInitialized) return;
+        if (!_showEdgeOverlay) return;
+
+        try {
+          setState(() {
+            _isDetectingEdges = true;
+          });
+
+          // 捕获当前帧
+          final image = await _controller!.takePicture();
+          final bytes = await image.readAsBytes();
+
+          // 检测边缘
+          final corners = await _imageProcessingService.detectEdges(bytes);
+
+          if (mounted) {
+            setState(() {
+              _detectedEdges = corners;
+              _isDetectingEdges = false;
+            });
+          }
+        } catch (e) {
+          debugPrint('Edge detection error: $e');
+          if (mounted) {
+            setState(() {
+              _isDetectingEdges = false;
+            });
+          }
+        }
+      },
+    );
   }
 
   Future<void> _initializeCamera() async {
@@ -117,6 +169,7 @@ class _CameraScreenState extends State<CameraScreen>
   void dispose() {
     _controller?.dispose();
     _shutterAnimation.dispose();
+    _edgeDetectionTimer?.cancel();
     super.dispose();
   }
 
@@ -136,20 +189,29 @@ class _CameraScreenState extends State<CameraScreen>
               child: CircularProgressIndicator(color: Colors.white),
             ),
 
-          // Scan Guide Overlay
-          Center(
-            child: Container(
-              width: MediaQuery.of(context).size.width * 0.85,
-              height: MediaQuery.of(context).size.width * 0.6,
-              decoration: BoxDecoration(
-                border: Border.all(color: AppColors.primary, width: 2),
-                borderRadius: BorderRadius.circular(8),
+          // Scan Guide Overlay with Edge Detection
+          if (_showEdgeOverlay && _detectedEdges.isNotEmpty)
+            CustomPaint(
+              painter: _EdgeDetectionPainter(
+                corners: _detectedEdges,
+                isDetecting: _isDetectingEdges,
               ),
-              child: CustomPaint(
-                painter: _CornerPainter(),
+              child: SizedBox.expand(),
+            )
+          else if (_showEdgeOverlay)
+            Center(
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.85,
+                height: MediaQuery.of(context).size.width * 0.6,
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.primary, width: 2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: CustomPaint(
+                  painter: _CornerPainter(),
+                ),
               ),
             ),
-          ),
 
           // Top Controls
           SafeArea(
@@ -174,6 +236,17 @@ class _CameraScreenState extends State<CameraScreen>
                       _buildCircleButton(
                         icon: Icons.cameraswitch,
                         onTap: _switchCamera,
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCircleButton(
+                        icon: _showEdgeOverlay
+                            ? Icons.crop_square
+                            : Icons.crop_free,
+                        onTap: () {
+                          setState(() {
+                            _showEdgeOverlay = !_showEdgeOverlay;
+                          });
+                        },
                       ),
                     ],
                   ),
@@ -403,4 +476,81 @@ class _CornerPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _EdgeDetectionPainter extends CustomPainter {
+  final List<List<int>> corners;
+  final bool isDetecting;
+
+  _EdgeDetectionPainter({
+    required this.corners,
+    required this.isDetecting,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (corners.isEmpty) return;
+
+    final paint = Paint()
+      ..color = isDetecting ? Colors.orange : AppColors.primary
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke;
+
+    final path = Path();
+
+    // 将角点转换为屏幕坐标
+    for (int i = 0; i < corners.length; i++) {
+      final corner = corners[i];
+      final x = corner[0].toDouble();
+      final y = corner[1].toDouble();
+
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+
+    path.close();
+    canvas.drawPath(path, paint);
+
+    // 绘制角点圆圈
+    final circlePaint = Paint()
+      ..color = AppColors.primary
+      ..style = PaintingStyle.fill;
+
+    for (final corner in corners) {
+      canvas.drawCircle(
+        Offset(corner[0].toDouble(), corner[1].toDouble()),
+        8,
+        circlePaint,
+      );
+    }
+
+    // 如果正在检测，显示加载指示器
+    if (isDetecting) {
+      final textPainter = TextPainter(
+        text: const TextSpan(
+          text: '检测中...',
+          style: TextStyle(
+            color: Colors.orange,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(size.width / 2 - textPainter.width / 2, 20),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _EdgeDetectionPainter oldDelegate) {
+    return oldDelegate.corners != corners ||
+        oldDelegate.isDetecting != isDetecting;
+  }
 }

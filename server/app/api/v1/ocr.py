@@ -1,4 +1,5 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+"""OCR 文字识别 API - 支持同步和异步识别"""
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
 from typing import Optional, List
 import os
 import uuid
@@ -8,7 +9,7 @@ from app.services.image_processor import ImageProcessor
 from app.core.config.settings import settings
 
 router = APIRouter()
-ocr_service = OCRService()
+ocr_service = OCRService(enable_cache=True)
 image_processor = ImageProcessor()
 
 
@@ -21,7 +22,7 @@ async def extract_text(
     psm: Optional[int] = Form(-1),
 ):
     """
-    从上传图片中提取文字
+    从上传图片中提取文字（同步）
 
     - **language**: OCR语言，支持 chi_sim, eng, jpn, kor 等，可用+组合
     - **preprocess**: 是否启用图片预处理
@@ -73,6 +74,67 @@ async def extract_text(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"OCR服务异常: {str(e)}")
+
+
+@router.post("/ocr/extract-async")
+async def extract_text_async(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    language: Optional[str] = Form("chi_sim+eng"),
+    preprocess: Optional[bool] = Form(True),
+    preprocess_mode: Optional[str] = Form("auto"),
+):
+    """
+    异步 OCR 识别 - 适用于大文件或批量处理
+    
+    返回任务 ID，通过 /ocr/task/{task_id} 查询进度和结果
+    """
+    try:
+        # 保存上传文件
+        upload_dir = os.path.join(settings.UPLOAD_DIR, "ocr_temp")
+        os.makedirs(upload_dir, exist_ok=True)
+
+        file_id = str(uuid.uuid4())
+        file_ext = os.path.splitext(file.filename or ".jpg")[1]
+        file_path = os.path.join(upload_dir, f"{file_id}{file_ext}")
+
+        content = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(content)
+
+        # 创建异步任务
+        task_id = await ocr_service.create_task(
+            file_path,
+            language=language,
+            preprocess=preprocess,
+            preprocess_mode=preprocess_mode,
+        )
+
+        return {
+            "data": {
+                "task_id": task_id,
+                "status": "pending",
+                "status_url": f"/api/v1/ocr/task/{task_id}",
+            },
+            "message": "OCR 任务已创建"
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"创建 OCR 任务失败: {str(e)}")
+
+
+@router.get("/ocr/task/{task_id}")
+async def get_task_status(task_id: str):
+    """
+    查询 OCR 任务状态
+    
+    返回任务进度和结果（如果已完成）
+    """
+    status = ocr_service.get_task_status(task_id)
+    if not status:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    
+    return {"data": status}
 
 
 @router.post("/ocr/extract-batch")
@@ -160,3 +222,12 @@ async def get_supported_languages():
             ],
         }
     }
+
+
+@router.delete("/ocr/cache")
+async def clear_ocr_cache():
+    """清空 OCR 缓存"""
+    if ocr_service.cache:
+        ocr_service.cache.clear()
+        return {"message": "OCR 缓存已清空"}
+    return {"message": "缓存未启用"}

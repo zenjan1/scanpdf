@@ -1,17 +1,12 @@
+"""安全认证工具 - JWT Token、密码哈希"""
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
 import bcrypt
-from fastapi import HTTPException, status, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
+
 from app.core.config.settings import settings
-from app.core.config.database import get_db
-from app.models.user import User
-
-
-# Bearer Token 认证
-security = HTTPBearer()
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -42,15 +37,47 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         JWT 令牌字符串
     """
     to_encode = data.copy()
-    
+
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
-    to_encode.update({"exp": expire})
+        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    to_encode.update({
+        "exp": expire,
+        "type": "access",
+        "iat": datetime.now(timezone.utc),
+    })
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+    return encoded_jwt
+
+
+def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """
+    创建刷新令牌
     
+    Args:
+        data: 令牌数据
+        expires_delta: 过期时间增量（默认 7 天）
+        
+    Returns:
+        JWT 令牌字符串
+    """
+    to_encode = data.copy()
+
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(days=7)
+
+    to_encode.update({
+        "exp": expire,
+        "type": "refresh",
+        "iat": datetime.now(timezone.utc),
+    })
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
     return encoded_jwt
 
 
@@ -70,46 +97,19 @@ def decode_token(token: str) -> dict:
     except JWTError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail="无效的认证凭证",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
-) -> User:
+def verify_token(token: str) -> dict:
     """
-    获取当前用户（依赖注入）
+    验证令牌并返回 payload
     
     Args:
-        credentials: HTTP 认证凭证
-        db: 数据库会话
+        token: JWT 令牌
         
     Returns:
-        用户对象
+        令牌数据字典
     """
-    token = credentials.credentials
-    payload = decode_token(token)
-    
-    user_id = payload.get("sub")
-    if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials"
-        )
-    
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found"
-        )
-    
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user"
-        )
-    
-    return user
+    return decode_token(token)

@@ -48,7 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: Icon(Icons.access_time, color: AppColors.primary),
+              leading: const Icon(Icons.access_time, color: AppColors.primary),
               title: const Text('按更新时间排序'),
               trailing: _sortBy == 'updatedAt' ? const Icon(Icons.check, color: AppColors.primary) : null,
               onTap: () {
@@ -61,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.title, color: AppColors.primary),
+              leading: const Icon(Icons.title, color: AppColors.primary),
               title: const Text('按标题排序'),
               trailing: _sortBy == 'title' ? const Icon(Icons.check, color: AppColors.primary) : null,
               onTap: () {
@@ -74,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.calendar_today, color: AppColors.primary),
+              leading: const Icon(Icons.calendar_today, color: AppColors.primary),
               title: const Text('按创建时间排序'),
               trailing: _sortBy == 'createdAt' ? const Icon(Icons.check, color: AppColors.primary) : null,
               onTap: () {
@@ -141,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         icon: const Icon(Icons.clear),
                         onPressed: () {
                           _searchController.clear();
-                          context.read<DocumentBloc>().add(LoadDocumentsEvent());
+                          context.read<DocumentBloc>().add(const LoadDocumentsEvent());
                         },
                       )
                     : null,
@@ -151,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               onChanged: (value) {
                 if (value.isEmpty) {
-                  context.read<DocumentBloc>().add(LoadDocumentsEvent());
+                  context.read<DocumentBloc>().add(const LoadDocumentsEvent());
                 } else {
                   context
                       .read<DocumentBloc>()
@@ -181,7 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         AppButton(
                           text: '重试',
                           onPressed: () {
-                            context.read<DocumentBloc>().add(LoadDocumentsEvent());
+                            context.read<DocumentBloc>().add(const LoadDocumentsEvent());
                           },
                         ),
                       ],
