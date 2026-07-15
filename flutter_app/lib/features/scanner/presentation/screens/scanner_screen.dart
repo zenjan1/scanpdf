@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:image/image.dart' as img;
 import 'package:scanpdf/core/theme/app_colors.dart';
 import 'package:scanpdf/core/services/image_processing_service.dart';
 import 'package:scanpdf/core/services/pdf_service.dart';
@@ -62,6 +63,69 @@ class _ScannerScreenState extends State<ScannerScreen>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _cropToAspectRatio(double ratio) async {
+    if (_imagePaths.isEmpty) return;
+    
+    setState(() => _isProcessing = true);
+    
+    try {
+      final imagePath = _imagePaths[_currentImageIndex];
+      final image = img.decodeImage(File(imagePath).readAsBytesSync());
+      if (image == null) throw Exception('无法解码图片');
+      
+      final width = image.width;
+      final height = image.height;
+      
+      int cropWidth, cropHeight;
+      if (width / height > ratio) {
+        // 图像太宽，按高度计算宽度
+        cropHeight = height;
+        cropWidth = (height * ratio).toInt();
+      } else {
+        // 图像太高，按宽度计算高度
+        cropWidth = width;
+        cropHeight = (width / ratio).toInt();
+      }
+      
+      final x = (width - cropWidth) ~/ 2;
+      final y = (height - cropHeight) ~/ 2;
+      
+      final cropped = img.copyCrop(image, x: x, y: y, width: cropWidth, height: cropHeight);
+      final croppedBytes = img.encodeJpg(cropped);
+      
+      final croppedPath = '${imagePath}_cropped_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      await File(croppedPath).writeAsBytes(croppedBytes);
+      
+      setState(() {
+        _imagePaths[_currentImageIndex] = croppedPath;
+        _isProcessing = false;
+      });
+    } catch (e) {
+      setState(() => _isProcessing = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('裁剪失败: $e')),
+        );
+      }
+    }
+  }
+
+  void _showFreeCropDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('自由裁剪'),
+        content: const Text('请使用图片编辑应用进行自由裁剪'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _applyFilter(String filterName, String imagePath) async {
@@ -374,14 +438,83 @@ class _ScannerScreenState extends State<ScannerScreen>
               _applyFilter('magic', _imagePaths[_currentImageIndex]);
             }),
             const SizedBox(width: 16),
-            _buildCropButton('1:1', Icons.square, () {}),
+            _buildCropButton('1:1', Icons.square, () {
+              _cropToAspectRatio(1.0);
+            }),
             const SizedBox(width: 16),
-            _buildCropButton('A4', Icons.aspect_ratio, () {}),
+            _buildCropButton('A4', Icons.aspect_ratio, () {
+              _cropToAspectRatio(210 / 297); // A4 比例
+            }),
             const SizedBox(width: 16),
-            _buildCropButton('自由', Icons.crop_free, () {}),
+            _buildCropButton('自由', Icons.crop_free, () {
+              _showFreeCropDialog();
+            }),
           ],
         ),
       ],
+    );
+  }
+
+  Future<void> _cropToAspectRatio(double ratio) async {
+    if (_imagePaths.isEmpty) return;
+    
+    setState(() => _isProcessing = true);
+    
+    try {
+      final imagePath = _imagePaths[_currentImageIndex];
+      final image = img.decodeImage(File(imagePath).readAsBytesSync());
+      if (image == null) throw Exception('无法解码图片');
+      
+      final width = image.width;
+      final height = image.height;
+      
+      int cropWidth, cropHeight;
+      if (width / height > ratio) {
+        // 图像太宽，按高度计算宽度
+        cropHeight = height;
+        cropWidth = (height * ratio).toInt();
+      } else {
+        // 图像太高，按宽度计算高度
+        cropWidth = width;
+        cropHeight = (width / ratio).toInt();
+      }
+      
+      final x = (width - cropWidth) ~/ 2;
+      final y = (height - cropHeight) ~/ 2;
+      
+      final cropped = img.copyCrop(image, x: x, y: y, width: cropWidth, height: cropHeight);
+      final croppedBytes = img.encodeJpg(cropped);
+      
+      final croppedPath = '${imagePath}_cropped_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      await File(croppedPath).writeAsBytes(croppedBytes);
+      
+      setState(() {
+        _imagePaths[_currentImageIndex] = croppedPath;
+        _isProcessing = false;
+      });
+    } catch (e) {
+      setState(() => _isProcessing = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('裁剪失败: $e')),
+        );
+      }
+    }
+  }
+
+  void _showFreeCropDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('自由裁剪'),
+        content: const Text('请使用图片编辑应用进行自由裁剪'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
     );
   }
 
