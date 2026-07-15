@@ -29,11 +29,21 @@ android {
         }
     }
 
+    signingConfigs {
+        release {
+            storeFile file("upload-keystore.jks")
+            storePassword "scanpdf123"
+            keyAlias "upload"
+            keyPassword "scanpdf123"
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig = signingConfigs.debug
-            minifyEnabled false
-            shrinkResources false
+            signingConfig = signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
