@@ -242,38 +242,73 @@ async def confirm_password_reset(req: PasswordResetConfirm, db: Session = Depend
 async def change_password(
     req: PasswordChangeRequest,
     db: Session = Depends(get_db),
-    # current_user: User = Depends(get_current_user),  # TODO: 添加认证依赖
+    token: str = Depends(lambda request: request.headers.get("Authorization", "").replace("Bearer ", ""))
 ):
     """
     修改密码（需要登录）
     
     - 需要验证旧密码
     """
-    # TODO: 从认证中获取当前用户
-    # user = current_user
+    if not token:
+        raise HTTPException(status_code=401, detail="未提供认证令牌")
     
-    # 演示模式：暂时禁用此端点
-    raise HTTPException(
-        status_code=501, 
-        detail="此功能需要完整的认证系统，请使用密码重置功能"
-    )
+    try:
+        payload = decode_token(token)
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="无效的令牌")
+        
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="用户不存在")
+        
+        # 验证旧密码
+        pwd = req.old_password[:72]
+        if not verify_password(pwd, user.hashed_password):
+            raise HTTPException(status_code=400, detail="旧密码错误")
+        
+        # 更新密码
+        new_pwd = req.new_password[:72]
+        user.hashed_password = get_password_hash(new_pwd)
+        db.commit()
+        
+        return {"message": "密码修改成功"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"认证失败: {str(e)}")
 
 
 @router.get("/auth/me")
 async def get_current_user_info(
     db: Session = Depends(get_db),
-    # current_user: User = Depends(get_current_user),  # TODO: 添加认证依赖
+    token: str = Depends(lambda request: request.headers.get("Authorization", "").replace("Bearer ", ""))
 ):
     """
     获取当前用户信息
     
     - 需要 Bearer Token 认证
     """
-    # TODO: 实现完整的认证
-    return {
-        "message": "此端点需要完整的认证系统",
-        "data": None
-    }
+    if not token:
+        raise HTTPException(status_code=401, detail="未提供认证令牌")
+    
+    try:
+        payload = decode_token(token)
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="无效的令牌")
+        
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="用户不存在")
+        
+        return {
+            "data": user.to_dict()
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"认证失败: {str(e)}")
 
 
 @router.post("/auth/logout")
