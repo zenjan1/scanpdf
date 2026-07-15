@@ -32,7 +32,7 @@ async def get_documents(
     tags: Optional[str] = Query(None, description="标签过滤，逗号分隔"),
     is_favorite: Optional[bool] = Query(None, description="收藏过滤"),
     db: Session = Depends(get_db),
-    current_user_id: Optional[str] = Depends(lambda: None),  # TODO: 添加认证
+    user_id: Optional[str] = Depends(lambda request: request.headers.get("X-User-Id")),
 ):
     """
     获取文档列表（支持分页、排序、过滤）
@@ -47,6 +47,10 @@ async def get_documents(
     """
     # 构建查询
     query = db.query(Document).filter(Document.is_deleted == False)
+    
+    # 如果提供了用户ID，则过滤该用户的文档
+    if user_id:
+        query = query.filter(Document.user_id == user_id)
     
     # 标题搜索
     if title:
