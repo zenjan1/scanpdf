@@ -82,7 +82,7 @@
 
 📞 **联系我们**
 
-• 问题反馈：support@scanpdf.com
+• 问题反馈：admin@zzy.edu.pl
 • 官方网站：https://scanpdf.com
 • 隐私政策：https://scanpdf.com/privacy
 • 开源代码：https://github.com/scanpdf
@@ -179,7 +179,7 @@ Turn your phone into a powerful document scanner! ScanPDF uses advanced AI techn
 
 📞 **Contact Us**
 
-• Support: support@scanpdf.com
+• Support: admin@zzy.edu.pl
 • Website: https://scanpdf.com
 • Privacy: https://scanpdf.com/privacy
 • Source: https://github.com/scanpdf

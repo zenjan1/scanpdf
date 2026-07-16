@@ -168,7 +168,7 @@
 
 ## 📞 联系信息
 
-- **支持邮箱**: support@scanpdf.zenjan.store
+- **支持邮箱**: admin@zzy.edu.pl
 - **隐私政策**: https://zenjan1.github.io/scanpdf/privacy.html
 - **官方网站**: https://zenjan1.github.io/scanpdf/
 - **源码仓库**: https://github.com/zenjan1/scanpdf
