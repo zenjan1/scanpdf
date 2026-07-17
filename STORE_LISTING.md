@@ -82,9 +82,9 @@
 
 📞 **联系我们**
 
-• 问题反馈：admin@zzy.edu.pl
-• 官方网站：https://scanpdf.com
-• 隐私政策：https://scanpdf.com/privacy
+• 问题反馈：admin@zenjan.store
+• 官方网站：https://jp.zenjan.store
+• 隐私政策：https://jp.zenjan.store/privacy
 • 开源代码：https://github.com/scanpdf
 
 💬 **用户评价**
@@ -179,9 +179,9 @@ Turn your phone into a powerful document scanner! ScanPDF uses advanced AI techn
 
 📞 **Contact Us**
 
-• Support: admin@zzy.edu.pl
-• Website: https://scanpdf.com
-• Privacy: https://scanpdf.com/privacy
+• Support: admin@zenjan.store
+• Website: https://jp.zenjan.store
+• Privacy: https://jp.zenjan.store/privacy
 • Source: https://github.com/scanpdf
 
 Download ScanPDF now and make document management easier!

@@ -16,7 +16,7 @@
 - [ ] 宣传视频（可选，但推荐）
 - [ ] 各市场开发者账号注册
 - [ ] 隐私政策托管（需要域名）
-- [ ] 应用官网（scanpdf.com）
+- [ ] 应用官网（https://jp.zenjan.store）
 
 ---
 
@@ -31,9 +31,9 @@
 1. 使用 Google 账号登录
 2. 填写开发者信息
    - 开发者名称：ScanPDF Team 或你的姓名
-   - 电子邮件：support@scanpdf.com
-   - 网站：https://scanpdf.com
-   - 隐私政策：https://scanpdf.com/privacy
+   - 电子邮件：admin@zenjan.store
+   - 网站：https://jp.zenjan.store
+   - 隐私政策：https://jp.zenjan.store/privacy
 3. 支付 $25 注册费（信用卡）
 4. 完成身份验证（身份证/护照）
 5. 等待审核（1-2 天）
@@ -240,9 +240,9 @@
 4. 访问：https://yourusername.github.io/scanpdf-privacy/
 
 ### 方案 2: 购买域名（推荐）
-1. 购买域名：scanpdf.com 或 scanpdf.app
+1. 购买域名：scanpdf.com 或 scanpdf.app（可选，当前使用 jp.zenjan.store）
 2. 托管到 GitHub Pages / Vercel / Netlify
-3. 访问：https://scanpdf.com/privacy
+3. 访问：https://jp.zenjan.store/privacy
 
 ### 方案 3: 使用免费托管
 - Vercel: https://vercel.com

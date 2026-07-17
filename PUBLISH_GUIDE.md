@@ -132,7 +132,7 @@
 - [x] 应用图标 (512x512)
 - [x] APK 文件 (已签名)
 - [x] 商店描述 (中英文)
-- [x] 联系邮箱：support@scanpdf.zenjan.store
+- [x] 联系邮箱：admin@zenjan.store
 
 ### 各市场账号状态
 - [x] 华为应用市场 - 已注册
@@ -168,7 +168,7 @@
 
 ## 📞 联系信息
 
-- **支持邮箱**: admin@zzy.edu.pl
+- **支持邮箱**: admin@zenjan.store
 - **隐私政策**: https://zenjan1.github.io/scanpdf/privacy.html
 - **官方网站**: https://zenjan1.github.io/scanpdf/
 - **源码仓库**: https://github.com/zenjan1/scanpdf

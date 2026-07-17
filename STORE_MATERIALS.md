@@ -72,4 +72,4 @@ Perfect for: Office documents, receipts, study materials, medical records, home 
 选择"所有人"或"Everyone"
 
 ## 联系邮箱
-admin@zzy.edu.pl
+admin@zenjan.store
