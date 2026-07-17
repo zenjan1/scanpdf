@@ -7,6 +7,7 @@ import 'package:scanpdf/core/services/image_processing_service.dart';
 import 'package:scanpdf/core/services/pdf_service.dart';
 import 'package:scanpdf/core/services/network_service.dart';
 import 'package:scanpdf/core/services/sync_service.dart';
+import 'package:scanpdf/core/services/update_service.dart';
 import 'package:scanpdf/features/document/data/datasources/document_local_datasource.dart';
 import 'package:scanpdf/features/document/data/datasources/document_local_datasource_impl.dart';
 import 'package:scanpdf/features/document/data/datasources/document_remote_datasource.dart';
@@ -26,6 +27,10 @@ Future<void> init() async {
   sl.registerLazySingleton(() => PdfService());
   sl.registerLazySingleton<NetworkService>(
     () => NetworkService(),
+    dispose: (service) => service.dispose(),
+  );
+  sl.registerLazySingleton<UpdateService>(
+    () => UpdateService(),
     dispose: (service) => service.dispose(),
   );
 

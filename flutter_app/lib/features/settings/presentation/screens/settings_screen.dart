@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:scanpdf/core/theme/app_colors.dart';
 import 'package:scanpdf/core/services/storage_service.dart';
 import 'package:scanpdf/core/services/network_service.dart';
 import 'package:scanpdf/core/services/database_service.dart';
+import 'package:scanpdf/core/services/update_service.dart';
+import 'package:scanpdf/features/update/update_bloc.dart';
+import 'package:scanpdf/shared/widgets/update_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Settings screen for app configuration
@@ -237,10 +241,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           // About
           _buildSectionHeader('关于'),
+          _buildNavigationTile(
+            icon: Icons.system_update,
+            title: '检查更新',
+            subtitle: '当前版本 v1.2.0',
+            onTap: () => _checkForUpdate(),
+          ),
           _buildInfoTile(
             icon: Icons.info_outline,
             title: '版本',
-            subtitle: 'v1.1.1',
+            subtitle: 'v1.2.0',
           ),
           _buildNavigationTile(
             icon: Icons.article_outlined,
@@ -800,5 +810,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
       onTap: onTap,
     );
+  }
+
+  void _checkForUpdate() {
+    context.read<UpdateBloc>().add(CheckForUpdate());
   }
 }
