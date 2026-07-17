@@ -105,11 +105,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('设置'),
-      ),
-      body: ListView(
+    return BlocListener<UpdateBloc, UpdateState>(
+      listener: (context, state) {
+        if (state is UpdateAvailable) {
+          showUpdateDialog(
+            context: context,
+            versionInfo: state.versionInfo,
+            forceUpdate: state.versionInfo.forceUpdate,
+            onUpdate: () {
+              context.read<UpdateBloc>().add(
+                    StartDownload(state.versionInfo.downloadUrl),
+                  );
+            },
+            onSkip: () {
+              context.read<UpdateBloc>().add(
+                    SkipVersion(state.versionInfo.version),
+                  );
+            },
+          );
+        } else if (state is UpdateNotAvailable) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('当前已是最新版本')),
+          );
+        } else if (state is UpdateError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message)),
+          );
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('设置'),
+        ),
+        body: ListView(
         children: [
           // Account Section
           _buildSectionHeader('账户'),
@@ -267,6 +295,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 32),
         ],
+      ),
       ),
     );
   }
@@ -813,6 +842,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _checkForUpdate() {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('正在检查更新...')),
+    );
     context.read<UpdateBloc>().add(CheckForUpdate());
   }
 }
