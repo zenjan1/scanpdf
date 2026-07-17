@@ -10,13 +10,13 @@ class UpdateDialog extends StatefulWidget {
   final VoidCallback? onCancel;
 
   const UpdateDialog({
-    Key? key,
+    super.key,
     required this.versionInfo,
     this.forceUpdate = false,
     required this.onUpdate,
     this.onSkip,
     this.onCancel,
-  }) : super(key: key);
+  });
 
   @override
   State<UpdateDialog> createState() => _UpdateDialogState();
@@ -70,8 +70,8 @@ class _UpdateDialogState extends State<UpdateDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async => !widget.forceUpdate,
+    return PopScope(
+      canPop: !widget.forceUpdate,
       child: Dialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -108,7 +108,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceVariant,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(

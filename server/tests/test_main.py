@@ -100,8 +100,8 @@ def test_auth_register():
     assert response.status_code == 200
     data = response.json()
     assert "data" in data
-    # 检查返回的用户数据中包含 id 字段
-    assert "id" in data["data"]
+    assert "access_token" in data["data"]
+    assert "user" in data["data"]
 
 
 def test_auth_login():
@@ -113,8 +113,9 @@ def test_auth_login():
     response = client.post("/api/v1/auth/login", json=payload)
     assert response.status_code == 200
     data = response.json()
-    assert "access_token" in data
-    assert data["token_type"] == "bearer"
+    assert "data" in data
+    assert "access_token" in data["data"]
+    assert data["data"]["token_type"] == "bearer"
 
 
 def test_ocr_extract():

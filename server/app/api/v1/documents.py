@@ -1,5 +1,5 @@
 """文档管理 API"""
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
@@ -22,6 +22,11 @@ from app.api.v1.schemas import (
 router = APIRouter()
 
 
+def get_user_id(request: Request) -> Optional[str]:
+    """从请求头获取用户ID"""
+    return request.headers.get("X-User-Id")
+
+
 @router.get("/documents")
 async def get_documents(
     page: int = Query(1, ge=1, description="页码"),
@@ -32,7 +37,7 @@ async def get_documents(
     tags: Optional[str] = Query(None, description="标签过滤，逗号分隔"),
     is_favorite: Optional[bool] = Query(None, description="收藏过滤"),
     db: Session = Depends(get_db),
-    user_id: Optional[str] = Depends(lambda request: request.headers.get("X-User-Id")),
+    user_id: Optional[str] = Depends(get_user_id),
 ):
     """
     获取文档列表（支持分页、排序、过滤）

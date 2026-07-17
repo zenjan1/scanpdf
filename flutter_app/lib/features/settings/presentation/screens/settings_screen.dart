@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:scanpdf/core/theme/app_colors.dart';
 import 'package:scanpdf/core/services/storage_service.dart';
 import 'package:scanpdf/core/services/network_service.dart';
 import 'package:scanpdf/core/services/database_service.dart';
-import 'package:scanpdf/core/services/update_service.dart';
 import 'package:scanpdf/features/update/update_bloc.dart';
 import 'package:scanpdf/shared/widgets/update_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -35,6 +35,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int _documentCount = 0;
   int _recycleBinCount = 0;
   int _offlineQueueSize = 0;
+  String _appVersion = '';
 
   @override
   void initState() {
@@ -43,6 +44,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadStorageSize();
     _loadStats();
     _checkNetworkStatus();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() {
+        _appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+      });
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -272,13 +283,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildNavigationTile(
             icon: Icons.system_update,
             title: '检查更新',
-            subtitle: '当前版本 v1.2.0',
+            subtitle: _appVersion.isEmpty ? '检查中...' : '当前版本 v$_appVersion',
             onTap: () => _checkForUpdate(),
           ),
           _buildInfoTile(
             icon: Icons.info_outline,
             title: '版本',
-            subtitle: 'v1.2.0',
+            subtitle: _appVersion.isEmpty ? '加载中...' : 'v$_appVersion',
           ),
           _buildNavigationTile(
             icon: Icons.article_outlined,
@@ -613,11 +624,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: () async {
               final newUrl = controller.text.trim();
               if (newUrl.isNotEmpty) {
+                final messenger = ScaffoldMessenger.of(dialogContext);
+                final navigator = Navigator.of(dialogContext);
                 setState(() => _serverUrl = newUrl);
-                final messenger = ScaffoldMessenger.of(context);
                 await _saveSetting('serverUrl', newUrl);
                 if (!mounted) return;
-                Navigator.of(dialogContext).pop();
+                navigator.pop();
                 messenger.showSnackBar(
                   const SnackBar(content: Text('服务器地址已更新')),
                 );

@@ -130,10 +130,6 @@ async def login(req: UserLoginRequest, db: Session = Depends(get_db)):
             "user_id": user.id,
         }
     }
-            "user_id": user.id,
-            "user": user.to_dict(),
-        }
-    }
 
 
 @router.post("/auth/refresh")

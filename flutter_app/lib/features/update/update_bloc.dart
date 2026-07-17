@@ -130,7 +130,7 @@ class UpdateBloc extends Bloc<UpdateEvent, UpdateState> {
         // 自动安装
         await _updateService.installApk(filePath);
       } else {
-        emit(UpdateError('下载失败'));
+        emit(const UpdateError('下载失败'));
       }
     } catch (e) {
       emit(UpdateError('下载失败：$e'));
