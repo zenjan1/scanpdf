@@ -398,7 +398,7 @@ flutter build macos --release
 - 📖 查看完整文档: [README.md](README.md)
 - 🏗️ 架构设计: [docs/architecture/OVERVIEW.md](docs/architecture/OVERVIEW.md)
 - 📡 API 文档: [docs/api/README.md](docs/api/README.md)
-- 🐛 问题反馈: [GitHub Issues](https://github.com/yourusername/scanpdf/issues)
+- 🐛 问题反馈: [GitHub Issues](https://github.com/zenjan1/scanpdf/issues)
 
 ---
 

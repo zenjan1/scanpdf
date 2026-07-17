@@ -128,6 +128,9 @@ async def login(req: UserLoginRequest, db: Session = Depends(get_db)):
             "token_type": "bearer",
             "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             "user_id": user.id,
+        }
+    }
+            "user_id": user.id,
             "user": user.to_dict(),
         }
     }

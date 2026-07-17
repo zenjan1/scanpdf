@@ -151,7 +151,7 @@ git push origin v1.0.0
 ```
 
 2. **创建 Release**
-访问: https://github.com/yourusername/scanpdf/releases/new
+访问: https://github.com/zenjan1/scanpdf/releases/new
 - Tag: v1.0.0
 - Title: 🎉 ScanPDF v1.0.0 - 首次正式发布
 - 上传: `release/scanpdf-v1.0.0.apk`
@@ -209,8 +209,8 @@ release/scanpdf-v1.0.0.apk
 
 ## 📞 支持与反馈
 
-- **问题反馈**: https://github.com/yourusername/scanpdf/issues
-- **讨论区**: https://github.com/yourusername/scanpdf/discussions
+- **问题反馈**: https://github.com/zenjan1/scanpdf/issues
+- **讨论区**: https://github.com/zenjan1/scanpdf/discussions
 - **邮箱**: admin@zenjan.store
 
 ## 📄 许可证

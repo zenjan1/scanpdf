@@ -237,7 +237,7 @@
 1. 创建 GitHub 仓库：scanpdf-privacy
 2. 上传 docs/privacy-policy.html
 3. 启用 GitHub Pages
-4. 访问：https://yourusername.github.io/scanpdf-privacy/
+4. 访问：https://zenjan1.github.io/scanpdf-privacy/
 
 ### 方案 2: 购买域名（推荐）
 1. 购买域名：zenjan.store（当前使用 jp.zenjan.store）

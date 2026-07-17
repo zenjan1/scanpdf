@@ -91,7 +91,7 @@ Closes #12
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yourusername/scanpdf.git
+git clone https://github.com/zenjan1/scanpdf.git
 cd scanpdf/flutter_app
 
 # 安装依赖

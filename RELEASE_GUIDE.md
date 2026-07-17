@@ -58,7 +58,7 @@ gh release create v1.0.0 \
    ```
 
 2. **在 GitHub 创建 Release**
-   - 访问：https://github.com/yourusername/scanpdf/releases/new
+   - 访问：https://github.com/zenjan1/scanpdf/releases/new
    - Tag version: `v1.0.0`
    - Target: `master`
    - Release title: `🎉 ScanPDF v1.0.0 - 首次正式发布`
@@ -129,9 +129,9 @@ flutter build macos --release
 
 ## 🔗 相关链接
 
-- **项目地址**: https://github.com/yourusername/scanpdf
+- **项目地址**: https://github.com/zenjan1/scanpdf
 - **API 文档**: https://jp.zenjan.store/api/v1/docs
-- **Releases**: https://github.com/yourusername/scanpdf/releases
+- **Releases**: https://github.com/zenjan1/scanpdf/releases
 
 ## 📝 发布后工作
 

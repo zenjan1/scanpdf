@@ -43,7 +43,7 @@
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/yourusername/scanpdf.git
+git clone https://github.com/zenjan1/scanpdf.git
 cd scanpdf
 ```
 
@@ -273,8 +273,8 @@ flutter build macos --release
 
 ## 📞 联系方式
 
-- 项目主页: [https://github.com/yourusername/scanpdf](https://github.com/yourusername/scanpdf)
-- 问题反馈: [GitHub Issues](https://github.com/yourusername/scanpdf/issues)
+- 项目主页: [https://github.com/zenjan1/scanpdf](https://github.com/zenjan1/scanpdf)
+- 问题反馈: [GitHub Issues](https://github.com/zenjan1/scanpdf/issues)
 - 邮件: admin@zenjan.store
 
 ---

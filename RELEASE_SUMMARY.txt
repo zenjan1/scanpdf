@@ -53,7 +53,7 @@
        --notes-file RELEASE_NOTES_v1.0.0.md
    
    方式 B - 手动创建:
-   访问: https://github.com/yourusername/scanpdf/releases/new
+   访问: https://github.com/zenjan1/scanpdf/releases/new
    Tag: v1.0.0
    Title: 🎉 ScanPDF v1.0.0 - 首次正式发布
 
@@ -121,11 +121,11 @@ Flutter 客户端:
                          相关链接
 ================================================================================
 
-📦 GitHub:    https://github.com/yourusername/scanpdf
+📦 GitHub:    https://github.com/zenjan1/scanpdf
 📚 API 文档:  https://jp.zenjan.store/api/v1/docs
-📖 快速开始:  https://github.com/yourusername/scanpdf/blob/master/QUICKSTART.md
-🤝 贡献指南:  https://github.com/yourusername/scanpdf/blob/master/CONTRIBUTING.md
-📋 更新日志:  https://github.com/yourusername/scanpdf/blob/master/CHANGELOG.md
+📖 快速开始:  https://github.com/zenjan1/scanpdf/blob/master/QUICKSTART.md
+🤝 贡献指南:  https://github.com/zenjan1/scanpdf/blob/master/CONTRIBUTING.md
+📋 更新日志:  https://github.com/zenjan1/scanpdf/blob/master/CHANGELOG.md
 
 ================================================================================
                          感谢贡献
@@ -143,8 +143,8 @@ Flutter 客户端:
 ================================================================================
 
 📧 邮箱: admin@zenjan.store
-🐛 问题反馈: https://github.com/yourusername/scanpdf/issues
-💬 讨论: https://github.com/yourusername/scanpdf/discussions
+🐛 问题反馈: https://github.com/zenjan1/scanpdf/issues
+💬 讨论: https://github.com/zenjan1/scanpdf/discussions
 
 ================================================================================
                     🎊 ScanPDF v1.0.0 发布就绪！🎊
