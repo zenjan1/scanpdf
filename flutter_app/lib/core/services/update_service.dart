@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -15,6 +14,7 @@ class VersionInfo {
   final String changelog;
   final bool forceUpdate;
   final String? apkSize;
+  final String source; // 'github' or 'gitee'
 
   VersionInfo({
     required this.version,
@@ -23,9 +23,10 @@ class VersionInfo {
     required this.changelog,
     this.forceUpdate = false,
     this.apkSize,
+    this.source = 'github',
   });
 
-  factory VersionInfo.fromJson(Map<String, dynamic> json) {
+  factory VersionInfo.fromJson(Map<String, dynamic> json, {String source = 'github'}) {
     return VersionInfo(
       version: json['version'] ?? '',
       buildNumber: json['buildNumber'] ?? 0,
@@ -33,6 +34,7 @@ class VersionInfo {
       changelog: json['changelog'] ?? '',
       forceUpdate: json['forceUpdate'] ?? false,
       apkSize: json['apkSize'],
+      source: source,
     );
   }
 
@@ -43,6 +45,7 @@ class VersionInfo {
         'changelog': changelog,
         'forceUpdate': forceUpdate,
         'apkSize': apkSize,
+        'source': source,
       };
 }
 
@@ -57,6 +60,31 @@ enum UpdateStatus {
   error,
 }
 
+/// 更新源配置
+class UpdateSource {
+  final String name;
+  final String apiUrl;
+  final String downloadBaseUrl;
+
+  const UpdateSource({
+    required this.name,
+    required this.apiUrl,
+    required this.downloadBaseUrl,
+  });
+
+  static const github = UpdateSource(
+    name: 'github',
+    apiUrl: 'https://api.github.com/repos/zenjan1/scanpdf/releases/latest',
+    downloadBaseUrl: 'https://github.com/zenjan1/scanpdf/releases/download',
+  );
+
+  static const gitee = UpdateSource(
+    name: 'gitee',
+    apiUrl: 'https://gitee.com/api/v5/repos/zenjan1/scanpdf/releases/latest',
+    downloadBaseUrl: 'https://gitee.com/zenjan1/scanpdf/releases/download',
+  );
+}
+
 /// 自动更新服务
 class UpdateService {
   static final UpdateService _instance = UpdateService._internal();
@@ -64,20 +92,98 @@ class UpdateService {
   UpdateService._internal();
 
   final Dio _dio = Dio();
-  static const String _versionCheckUrl =
-      'https://api.github.com/repos/zenjan1/scanpdf/releases/latest';
   static const String _skipVersionKey = 'skip_version';
+  static const String _updateSourceKey = 'update_source';
 
   /// 获取当前应用版本信息
   Future<PackageInfo> getCurrentVersion() async {
     return await PackageInfo.fromPlatform();
   }
 
+  /// 检测是否在中国大陆
+  Future<bool> isInChina() async {
+    try {
+      // 方法1: 检查系统语言
+      final locale = Platform.localeName.toLowerCase();
+      if (locale.contains('zh_cn') || locale.contains('zh_hans')) {
+        return true;
+      }
+
+      // 方法2: 检查时区
+      final tz = DateTime.now().timeZoneName;
+      if (tz == 'CST' || tz.contains('China')) {
+        return true;
+      }
+
+      // 方法3: 尝试访问 Google，如果失败则可能在中国
+      try {
+        final response = await _dio.get(
+          'https://www.google.com',
+          options: Options(connectTimeout: const Duration(seconds: 3)),
+        );
+        return response.statusCode != 200;
+      } catch (e) {
+        // 连接失败，可能在中国
+        return true;
+      }
+    } catch (e) {
+      debugPrint('检测地区失败: $e');
+      return false; // 默认使用 GitHub
+    }
+  }
+
+  /// 获取更新源
+  Future<UpdateSource> getUpdateSource() async {
+    // 优先使用用户设置
+    final prefs = await SharedPreferences.getInstance();
+    final userSource = prefs.getString(_updateSourceKey);
+    if (userSource == 'github') return UpdateSource.github;
+    if (userSource == 'gitee') return UpdateSource.gitee;
+
+    // 自动检测
+    final inChina = await isInChina();
+    return inChina ? UpdateSource.gitee : UpdateSource.github;
+  }
+
+  /// 设置更新源
+  Future<void> setUpdateSource(String source) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_updateSourceKey, source);
+  }
+
   /// 检查是否有新版本
   Future<VersionInfo?> checkForUpdate() async {
+    // 获取主要更新源
+    final primarySource = await getUpdateSource();
+    final fallbackSource = primarySource.name == 'github' 
+        ? UpdateSource.gitee 
+        : UpdateSource.github;
+
+    // 尝试主要源
+    var versionInfo = await _checkFromSource(primarySource);
+    
+    // 如果主要源失败，尝试备用源
+    if (versionInfo == null) {
+      debugPrint('主要源 ${primarySource.name} 失败，尝试备用源 ${fallbackSource.name}');
+      versionInfo = await _checkFromSource(fallbackSource);
+    }
+
+    return versionInfo;
+  }
+
+  /// 从指定源检查更新
+  Future<VersionInfo?> _checkFromSource(UpdateSource source) async {
     try {
-      // 从 GitHub 获取最新版本信息
-      final response = await _dio.get(_versionCheckUrl);
+      final response = await _dio.get(
+        source.apiUrl,
+        options: Options(
+          headers: source.name == 'github' 
+              ? {'Accept': 'application/vnd.github.v3+json'}
+              : {},
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+        ),
+      );
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -91,10 +197,21 @@ class UpdateService {
         String downloadUrl = '';
         String? apkSize;
         final assets = data['assets'] as List? ?? [];
+        
         for (var asset in assets) {
           final name = asset['name'] as String? ?? '';
           if (name.endsWith('.apk')) {
-            downloadUrl = asset['browser_download_url'] as String? ?? '';
+            // GitHub 和 Gitee 的 asset 结构略有不同
+            if (source.name == 'github') {
+              downloadUrl = asset['browser_download_url'] as String? ?? '';
+            } else {
+              // Gitee 的下载链接
+              final browserUrl = asset['browser_download_url'] as String? ?? '';
+              downloadUrl = browserUrl.isNotEmpty 
+                  ? browserUrl 
+                  : '${source.downloadBaseUrl}/$tagName/$name';
+            }
+            
             final size = asset['size'] as int? ?? 0;
             apkSize = _formatFileSize(size);
             break;
@@ -118,13 +235,14 @@ class UpdateService {
             buildNumber: newBuild,
             downloadUrl: downloadUrl,
             changelog: body,
-            forceUpdate: false, // GitHub releases 不支持强制更新
+            forceUpdate: false,
             apkSize: apkSize,
+            source: source.name,
           );
         }
       }
     } catch (e) {
-      debugPrint('检查更新失败: $e');
+      debugPrint('从 ${source.name} 检查更新失败: $e');
     }
     return null;
   }
