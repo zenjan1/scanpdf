@@ -240,7 +240,7 @@
 4. 访问：https://yourusername.github.io/scanpdf-privacy/
 
 ### 方案 2: 购买域名（推荐）
-1. 购买域名：scanpdf.com 或 scanpdf.app（可选，当前使用 jp.zenjan.store）
+1. 购买域名：zenjan.store（当前使用 jp.zenjan.store）
 2. 托管到 GitHub Pages / Vercel / Netlify
 3. 访问：https://jp.zenjan.store/privacy
 
