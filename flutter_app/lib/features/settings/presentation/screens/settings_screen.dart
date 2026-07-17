@@ -520,9 +520,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
 
       if (response.statusCode == 200 && response.data != null) {
-        final data = response.data['data'];
+        // 兼容两种响应格式：有 data 包裹 和 直接返回
+        final data = response.data['data'] ?? response.data;
         final accessToken = data['access_token'];
         final userId = data['user_id'] ?? data['user']?['id'];
+
+        if (accessToken == null) {
+          throw Exception('登录响应格式错误');
+        }
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isLoggedIn', true);

@@ -1,7 +1,7 @@
 name: scanpdf
 description: A powerful document scanner app with OCR, PDF generation, and cloud sync. Inspired by CamScanner.
 publish_to: 'none'
-version: 1.4.2+8
+version: 1.4.3+9
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
