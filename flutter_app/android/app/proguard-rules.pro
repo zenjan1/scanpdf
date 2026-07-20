@@ -42,3 +42,6 @@
 
 # Keep OCR service
 -keep class com.scanpdf.app.ocr.** { *; }
+
+# Suppress Play Core warnings (deferred components)
+-dontwarn com.google.android.play.core.**
