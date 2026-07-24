@@ -1,19 +1,19 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:tesseract_ocr/tesseract_ocr.dart';
+import 'package:tesseract_ocr/ocr_engine_config.dart';
 import 'package:image/image.dart' as img;
 
 /// OCR 语言选项
 enum OcrLanguage {
-  chinese('zh', '中文', TextRecognitionScript.chinese),
-  english('en', 'English', TextRecognitionScript.latin),
-  japanese('ja', '日本語', TextRecognitionScript.japanese),
-  korean('ko', '한국어', TextRecognitionScript.korean);
+  chinese('chi_sim', '中文'),
+  english('eng', 'English'),
+  japanese('jpn', '日本語'),
+  korean('kor', '한국어');
 
   final String code;
   final String displayName;
-  final TextRecognitionScript script;
-  const OcrLanguage(this.code, this.displayName, this.script);
+  const OcrLanguage(this.code, this.displayName);
 
   static OcrLanguage fromCode(String code) {
     return OcrLanguage.values.firstWhere(
@@ -141,10 +141,9 @@ class Rect {
   String toString() => 'Rect($left, $top, $right, $bottom)';
 }
 
-/// OCR 服务 - 支持多语言、预处理、缓存
+/// OCR 服务 - 基于 Tesseract 开源引擎，支持多语言、预处理、缓存
 class OcrService {
-  TextRecognizer? _currentRecognizer;
-  OcrLanguage _currentLanguage = OcrLanguage.chinese;
+  final OcrLanguage _currentLanguage = OcrLanguage.chinese;
 
   /// 结果缓存: imagePath+language -> OcrResult
   final Map<String, OcrResult> _cache = {};
@@ -152,17 +151,6 @@ class OcrService {
 
   /// 当前语言
   OcrLanguage get currentLanguage => _currentLanguage;
-
-  /// 获取指定语言的 TextRecognizer（复用已有实例）
-  TextRecognizer _getRecognizer(OcrLanguage language) {
-    if (_currentRecognizer != null && _currentLanguage == language) {
-      return _currentRecognizer!;
-    }
-    _currentRecognizer?.close();
-    _currentLanguage = language;
-    _currentRecognizer = TextRecognizer(script: language.script);
-    return _currentRecognizer!;
-  }
 
   /// 提取纯文本
   Future<String> extractText(
@@ -201,17 +189,18 @@ class OcrService {
 
       onProgress?.call('正在识别文字', 0.5);
 
-      // OCR 识别
-      final recognizer = _getRecognizer(language);
-      final inputImage = InputImage.fromFile(File(processedPath));
-      final recognizedText = await recognizer.processImage(inputImage);
+      // Tesseract OCR 识别
+      final config = OCRConfig(language: language.code);
+      final text = await TesseractOcr.extractText(
+        processedPath,
+        config: config,
+      );
 
       onProgress?.call('解析识别结果', 0.8);
 
-      // 解析结果为结构化数据
-      final blocks = _parseBlocks(recognizedText.blocks);
+      // 将纯文本解析为结构化数据
+      final blocks = _textToBlocks(text);
       final paragraphs = _groupIntoParagraphs(blocks);
-      final detectedLanguages = _collectLanguages(recognizedText.blocks);
 
       // 清理预处理临时文件
       if (processedPath != imagePath) {
@@ -223,11 +212,11 @@ class OcrService {
       stopwatch.stop();
 
       final result = OcrResult(
-        fullText: recognizedText.text,
+        fullText: text,
         blocks: blocks,
         paragraphs: paragraphs,
-        averageConfidence: _calculateConfidence(blocks),
-        detectedLanguages: detectedLanguages,
+        averageConfidence: 0.8,
+        detectedLanguages: {language.code: 1.0},
         processingTime: stopwatch.elapsed,
       );
 
@@ -242,33 +231,17 @@ class OcrService {
     }
   }
 
-  /// 置信度过滤 - 只保留高置信度的文本
+  /// 置信度过滤 - Tesseract 不提供逐字置信度，直接返回完整结果
   Future<OcrResult> recognizeTextFiltered(
     String imagePath, {
     OcrLanguage language = OcrLanguage.chinese,
     double confidenceThreshold = 0.7,
     OcrPreprocessMode preprocess = OcrPreprocessMode.auto,
   }) async {
-    final result = await recognizeText(
+    return recognizeText(
       imagePath,
       language: language,
       preprocess: preprocess,
-    );
-
-    // 过滤低置信度的块
-    final filteredBlocks = result.blocks
-        .where((block) => block.confidence >= confidenceThreshold)
-        .toList();
-
-    final filteredText = filteredBlocks.map((b) => b.text).join('\n');
-
-    return OcrResult(
-      fullText: filteredText,
-      blocks: filteredBlocks,
-      paragraphs: _groupIntoParagraphs(filteredBlocks),
-      averageConfidence: _calculateConfidence(filteredBlocks),
-      detectedLanguages: result.detectedLanguages,
-      processingTime: result.processingTime,
     );
   }
 
@@ -279,9 +252,7 @@ class OcrService {
   }) async {
     final result = await recognizeText(imagePath, language: language);
 
-    // 简单的表格检测逻辑：查找规则排列的文本块
     final tableBlocks = _detectTablePattern(result.blocks);
-
     if (tableBlocks == null) return null;
 
     return TableResult(
@@ -289,67 +260,6 @@ class OcrService {
       columns: tableBlocks.columns,
       cells: tableBlocks.cells,
       confidence: tableBlocks.confidence,
-    );
-  }
-
-  /// 检测表格模式
-  _TablePattern? _detectTablePattern(List<OcrBlock> blocks) {
-    if (blocks.length < 4) return null;
-
-    // 按 Y 坐标分组（行）
-    final rows = <List<OcrBlock>>[];
-    var currentRow = <OcrBlock>[blocks[0]];
-    var rowThreshold = blocks[0].boundingBox?.height ?? 20;
-
-    for (int i = 1; i < blocks.length; i++) {
-      final prevBox = blocks[i - 1].boundingBox;
-      final currBox = blocks[i].boundingBox;
-
-      if (prevBox != null && currBox != null) {
-        final yDiff = (currBox.top - prevBox.top).abs();
-
-        if (yDiff <= rowThreshold) {
-          currentRow.add(blocks[i]);
-        } else {
-          rows.add(List.from(currentRow));
-          currentRow = [blocks[i]];
-        }
-      }
-    }
-
-    if (currentRow.isNotEmpty) {
-      rows.add(currentRow);
-    }
-
-    // 检查是否形成表格（每行有相似的列数）
-    if (rows.length < 2) return null;
-
-    final columnCounts = rows.map((row) => row.length).toList();
-    final avgColumns = columnCounts.reduce((a, b) => a + b) / columnCounts.length;
-    final variance = columnCounts
-        .map((count) => (count - avgColumns) * (count - avgColumns))
-        .reduce((a, b) => a + b) / columnCounts.length;
-
-    // 如果方差太大，不是表格
-    if (variance > 1.0) return null;
-
-    // 构建单元格矩阵
-    final maxColumns = columnCounts.reduce((a, b) => a > b ? a : b);
-    final cells = <List<String?>>[];
-
-    for (final row in rows) {
-      final rowCells = <String?>[];
-      for (int i = 0; i < maxColumns; i++) {
-        rowCells.add(i < row.length ? row[i].text : null);
-      }
-      cells.add(rowCells);
-    }
-
-    return _TablePattern(
-      rows: rows.length,
-      columns: maxColumns,
-      cells: cells,
-      confidence: 0.8, // 简单的置信度评估
     );
   }
 
@@ -373,6 +283,108 @@ class OcrService {
     return results;
   }
 
+  // ─── 文本结构化 ───
+
+  /// 将 Tesseract 返回的纯文本解析为 OcrBlock 结构
+  List<OcrBlock> _textToBlocks(String text) {
+    if (text.trim().isEmpty) return [];
+
+    final blocks = <OcrBlock>[];
+    final lines = text.split('\n');
+    var currentBlockLines = <String>[];
+
+    for (final line in lines) {
+      if (line.trim().isEmpty) {
+        if (currentBlockLines.isNotEmpty) {
+          blocks.add(_createBlock(currentBlockLines));
+          currentBlockLines = [];
+        }
+      } else {
+        currentBlockLines.add(line);
+      }
+    }
+    if (currentBlockLines.isNotEmpty) {
+      blocks.add(_createBlock(currentBlockLines));
+    }
+
+    return blocks;
+  }
+
+  OcrBlock _createBlock(List<String> lines) {
+    final ocrLines = lines.map((lineText) {
+      final words = lineText.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).map((word) {
+        return OcrWord(text: word, confidence: 0.8);
+      }).toList();
+
+      return OcrLine(
+        text: lineText,
+        confidence: 0.8,
+        words: words,
+      );
+    }).toList();
+
+    return OcrBlock(
+      text: lines.join('\n'),
+      confidence: 0.8,
+      lines: ocrLines,
+      detectedLanguages: {},
+    );
+  }
+
+  /// 检测表格模式
+  _TablePattern? _detectTablePattern(List<OcrBlock> blocks) {
+    if (blocks.length < 4) return null;
+
+    // 按行数分组，检查是否有规则的列分隔（如 tab 或多空格）
+    final rows = <List<String>>[];
+    for (final block in blocks) {
+      for (final line in block.lines) {
+        // 尝试用 tab 或 2+ 空格分割
+        final cells = line.text.split(RegExp(r'\t|  +')).where((s) => s.trim().isNotEmpty).toList();
+        if (cells.length >= 2) {
+          rows.add(cells);
+        }
+      }
+    }
+
+    if (rows.length < 2) return null;
+
+    final columnCounts = rows.map((row) => row.length).toList();
+    final avgColumns = columnCounts.reduce((a, b) => a + b) / columnCounts.length;
+
+    // 列数一致性检查
+    final consistent = columnCounts.where((c) => (c - avgColumns).abs() <= 1).length;
+    if (consistent < rows.length * 0.6) return null;
+
+    final maxColumns = columnCounts.reduce((a, b) => a > b ? a : b);
+    final cells = <List<String?>>[];
+    for (final row in rows) {
+      final rowCells = <String?>[];
+      for (int i = 0; i < maxColumns; i++) {
+        rowCells.add(i < row.length ? row[i].trim() : null);
+      }
+      cells.add(rowCells);
+    }
+
+    return _TablePattern(
+      rows: rows.length,
+      columns: maxColumns,
+      cells: cells,
+      confidence: 0.7,
+    );
+  }
+
+  List<OcrParagraph> _groupIntoParagraphs(List<OcrBlock> blocks) {
+    if (blocks.isEmpty) return [];
+    return blocks.map((block) {
+      return OcrParagraph(
+        text: block.text,
+        blocks: [block],
+        averageConfidence: block.confidence,
+      );
+    }).toList();
+  }
+
   // ─── 图片预处理 ───
 
   Future<String> _preprocessImage(
@@ -390,7 +402,6 @@ class OcrService {
         return imagePath;
 
       case OcrPreprocessMode.auto:
-        // 自动预处理: 灰度 + 对比度增强 + 轻度降噪
         processed = img.grayscale(image);
         processed = img.adjustColor(processed, contrast: 1.4, brightness: 5);
         processed = img.gaussianBlur(processed, radius: 1);
@@ -408,7 +419,6 @@ class OcrService {
       case OcrPreprocessMode.binarize:
         processed = img.grayscale(image);
         processed = img.adjustColor(processed, contrast: 2.0);
-        // 简单二值化: 阈值 128
         final data = processed.getBytes();
         for (int i = 0; i < data.length; i += 4) {
           final val = data[i] > 128 ? 255 : 0;
@@ -428,139 +438,6 @@ class OcrService {
     return processedPath;
   }
 
-  // ─── 结果解析 ───
-
-  List<OcrBlock> _parseBlocks(List<TextBlock> mlBlocks) {
-    return mlBlocks.map((block) {
-      final lines = block.lines.map((line) {
-        final words = line.elements.map((element) {
-          return OcrWord(
-            text: element.text,
-            confidence: element.confidence ?? 0.0,
-            boundingBox: _convertRect(element.boundingBox),
-          );
-        }).toList();
-
-        // 计算行的平均置信度
-        final wordConfidences = words.map((w) => w.confidence).where((c) => c > 0);
-        final lineConfidence = wordConfidences.isEmpty
-            ? 0.0
-            : wordConfidences.reduce((a, b) => a + b) / wordConfidences.length;
-
-        return OcrLine(
-          text: line.text,
-          confidence: lineConfidence,
-          words: words,
-          boundingBox: _convertRect(line.boundingBox),
-        );
-      }).toList();
-
-      // 计算 block 的平均置信度
-      final lineConfidences = lines.map((l) => l.confidence).where((c) => c > 0);
-      final blockConfidence = lineConfidences.isEmpty
-          ? 0.0
-          : lineConfidences.reduce((a, b) => a + b) / lineConfidences.length;
-
-      return OcrBlock(
-        text: block.text,
-        confidence: blockConfidence,
-        lines: lines,
-        detectedLanguages: _extractBlockLanguages(block),
-        boundingBox: _convertRect(block.boundingBox),
-      );
-    }).toList();
-  }
-
-  List<OcrParagraph> _groupIntoParagraphs(List<OcrBlock> blocks) {
-    if (blocks.isEmpty) return [];
-
-    final paragraphs = <OcrParagraph>[];
-    var currentBlocks = <OcrBlock>[blocks[0]];
-
-    for (int i = 1; i < blocks.length; i++) {
-      final prevBox = blocks[i - 1].boundingBox;
-      final currBox = blocks[i].boundingBox;
-
-      // 如果两个 block 之间垂直间距较大，认为是新段落
-      final gap = (currBox != null && prevBox != null)
-          ? currBox.top - prevBox.bottom
-          : 0.0;
-      final lineHeight = prevBox?.height ?? 20.0;
-
-      if (gap > lineHeight * 0.8) {
-        paragraphs.add(_createParagraph(currentBlocks));
-        currentBlocks = <OcrBlock>[blocks[i]];
-      } else {
-        currentBlocks.add(blocks[i]);
-      }
-    }
-
-    if (currentBlocks.isNotEmpty) {
-      paragraphs.add(_createParagraph(currentBlocks));
-    }
-
-    return paragraphs;
-  }
-
-  OcrParagraph _createParagraph(List<OcrBlock> blocks) {
-    final text = blocks.map((b) => b.text).join('\n');
-    final avgConf = blocks.isEmpty
-        ? 0.0
-        : blocks.map((b) => b.confidence).reduce((a, b) => a + b) /
-            blocks.length;
-    return OcrParagraph(text: text, blocks: blocks, averageConfidence: avgConf);
-  }
-
-  Map<String, double> _collectLanguages(List<TextBlock> mlBlocks) {
-    final langCount = <String, int>{};
-    for (final block in mlBlocks) {
-      for (final line in block.lines) {
-        for (final element in line.elements) {
-          // recognizedLanguages 是 List<String>
-          for (final lang in element.recognizedLanguages) {
-            final code = lang.isEmpty ? 'unknown' : lang;
-            langCount[code] = (langCount[code] ?? 0) + 1;
-          }
-        }
-      }
-    }
-    final total = langCount.values.fold(0, (a, b) => a + b);
-    if (total == 0) return {};
-    return langCount.map((k, v) => MapEntry(k, v / total));
-  }
-
-  Map<String, double> _extractBlockLanguages(TextBlock block) {
-    final langs = <String, int>{};
-    for (final line in block.lines) {
-      for (final element in line.elements) {
-        // recognizedLanguages 是 List<String>
-        for (final lang in element.recognizedLanguages) {
-          final code = lang.isEmpty ? 'unknown' : lang;
-          langs[code] = (langs[code] ?? 0) + 1;
-        }
-      }
-    }
-    final total = langs.values.fold(0, (a, b) => a + b);
-    if (total == 0) return {};
-    return langs.map((k, v) => MapEntry(k, v / total));
-  }
-
-  double _calculateConfidence(List<OcrBlock> blocks) {
-    if (blocks.isEmpty) return 0.0;
-    final total = blocks.map((b) => b.confidence).reduce((a, b) => a + b);
-    return total / blocks.length;
-  }
-
-  Rect? _convertRect(dynamic rawRect) {
-    if (rawRect == null) return null;
-    return Rect(
-      left: rawRect.left.toDouble(),
-      top: rawRect.top.toDouble(),
-      right: rawRect.right.toDouble(),
-      bottom: rawRect.bottom.toDouble(),
-    );
-  }
-
   // ─── 缓存管理 ───
 
   void _addToCache(String key, OcrResult result) {
@@ -575,8 +452,6 @@ class OcrService {
 
   /// 关闭服务
   Future<void> close() async {
-    await _currentRecognizer?.close();
-    _currentRecognizer = null;
     _cache.clear();
   }
 }
@@ -595,7 +470,6 @@ class TableResult {
     required this.confidence,
   });
 
-  /// 获取指定单元格
   String? getCell(int row, int col) {
     if (row < 0 || row >= rows || col < 0 || col >= columns) {
       return null;
@@ -603,31 +477,26 @@ class TableResult {
     return cells[row][col];
   }
 
-  /// 获取指定行
   List<String?> getRow(int rowIndex) {
     if (rowIndex < 0 || rowIndex >= rows) return [];
     return cells[rowIndex];
   }
 
-  /// 获取指定列
   List<String?> getColumn(int colIndex) {
     if (colIndex < 0 || colIndex >= columns) return [];
     return cells.map((row) => row[colIndex]).toList();
   }
 
-  /// 转为 CSV 格式
   String toCsv({String separator = ','}) {
     return cells
         .map((row) => row.map((cell) => cell ?? '').join(separator))
         .join('\n');
   }
 
-  /// 转为 JSON 格式
   List<Map<String, String>> toJson() {
     if (rows < 2) return [];
 
-    // 假设第一行是表头
-    final headers = cells[0].map((h) => h ?? 'col_$cells[0].indexOf(h)}').toList();
+    final headers = cells[0].map((h) => h ?? 'col_${cells[0].indexOf(h)}').toList();
 
     return cells.skip(1).map((row) {
       final map = <String, String>{};

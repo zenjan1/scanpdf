@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:scanpdf/core/services/ocr_service.dart';
 
 /// OCR 任务状态
 enum OcrTaskStatus {
@@ -58,8 +57,8 @@ class OcrTask {
     result: json['result'],
     error: json['error'],
     createdAt: DateTime.parse(json['createdAt']),
-    completedAt: json['completedAt'] != null 
-        ? DateTime.parse(json['completedAt']) 
+    completedAt: json['completedAt'] != null
+        ? DateTime.parse(json['completedAt'])
         : null,
     retryCount: json['retryCount'] ?? 0,
   );
@@ -76,14 +75,14 @@ class OcrQueueService {
   final List<OcrTask> _taskQueue = [];
   bool _isProcessing = false;
   Timer? _progressTimer;
-  
-  // 任务队列变更监听
+
   final _taskController = StreamController<List<OcrTask>>.broadcast();
   Stream<List<OcrTask>> get taskStream => _taskController.stream;
-  
-  // 进度更新监听
+
   final _progressController = StreamController<BatchOcrProgress>.broadcast();
   Stream<BatchOcrProgress> get progressStream => _progressController.stream;
+
+  final OcrService _ocrService = OcrService();
 
   static const int maxRetryCount = 3;
   static const String taskQueueKey = 'ocr_task_queue';
@@ -143,12 +142,10 @@ class OcrQueueService {
     if (_isProcessing || _taskQueue.isEmpty) return;
 
     _isProcessing = true;
-    final textRecognizer = TextRecognizer();
 
     try {
       final pendingTasks = _taskQueue
-          .where((task) => 
-              task.status == OcrTaskStatus.pending)
+          .where((task) => task.status == OcrTaskStatus.pending)
           .toList();
 
       for (final task in pendingTasks) {
@@ -159,10 +156,13 @@ class OcrQueueService {
         _emitProgressUpdate();
 
         try {
-          final image = InputImage.fromFile(File(task.imagePath));
-          final recognizedText = await textRecognizer.processImage(image);
+          final language = OcrLanguage.fromCode(task.language);
+          final text = await _ocrService.extractText(
+            task.imagePath,
+            language: language,
+          );
 
-          task.result = recognizedText.text;
+          task.result = text;
           task.status = OcrTaskStatus.completed;
           task.completedAt = DateTime.now();
         } catch (e) {
@@ -181,7 +181,6 @@ class OcrQueueService {
         _emitProgressUpdate();
       }
     } finally {
-      await textRecognizer.close();
       _isProcessing = false;
     }
   }
@@ -191,7 +190,7 @@ class OcrQueueService {
     final index = _taskQueue.indexWhere((task) => task.id == taskId);
     if (index != -1) {
       final task = _taskQueue[index];
-      if (task.status == OcrTaskStatus.pending || 
+      if (task.status == OcrTaskStatus.pending ||
           task.status == OcrTaskStatus.processing) {
         task.status = OcrTaskStatus.cancelled;
         await _saveTaskQueue();
@@ -222,8 +221,8 @@ class OcrQueueService {
 
   /// 清除已完成的任务
   Future<void> clearCompletedTasks() async {
-    _taskQueue.removeWhere((task) => 
-        task.status == OcrTaskStatus.completed || 
+    _taskQueue.removeWhere((task) =>
+        task.status == OcrTaskStatus.completed ||
         task.status == OcrTaskStatus.failed ||
         task.status == OcrTaskStatus.cancelled);
     await _saveTaskQueue();

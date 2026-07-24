@@ -1,0 +1,47 @@
+# F-Droid metadata for ScanPDF
+# See https://f-droid.org/en/docs/Build_Metadata_Reference/
+#
+# To submit: create a merge request at
+# https://gitlab.com/fdroid/fdroiddata/-/merge_requests
+# Place this file at metadata/com.scanpdf.app.yml
+
+Categories:
+  - Office
+  - Reading
+License: MIT
+AuthorName: ScanPDF
+AuthorEmail: scanpdf@example.com
+WebSite: https://github.com/zenjan1/scanpdf
+SourceCode: https://github.com/zenjan1/scanpdf
+IssueTracker: https://github.com/zenjan1/scanpdf/issues
+Changelog: https://github.com/zenjan1/scanpdf/releases
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+UpdateCheckData: https://github.com/zenjan1/scanpdf/releases|v(\d+\.\d+\.\d+)|/releases/tag/v.*|v(\d+\.\d+\.\d+)
+
+RepoType: git
+Repo: https://github.com/zenjan1/scanpdf.git
+
+Builds:
+  - versionName: 1.3.0
+    versionCode: 5
+    commit: v1.3.0
+    subdir: flutter_app
+    sudo:
+      - apt-get update
+      - apt-get install -y openjdk-17-jdk-headless
+      - update-java-alternatives --auto
+    output: build/app/outputs/flutter-apk/app-release.apk
+    srclibs:
+      - flutter/engine@3.24.0
+      - flutter/framework@3.24.0
+    build:
+      - export flutter_sdk=$$flutter$$
+      - $$flutter_sdk/bin/flutter config --no-analytics
+      - $$flutter_sdk/bin/flutter packages pub get
+      - $$flutter_sdk/bin/flutter build apk --release
+
+ArchivePolicy: 4
+AutoUpdateMode: Version
+UpdateCheckMode: Tags

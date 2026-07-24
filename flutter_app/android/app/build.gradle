@@ -29,18 +29,22 @@ android {
         }
     }
 
-    signingConfigs {
-        release {
-            storeFile file("upload-keystore.jks")
-            storePassword "scanpdf123"
-            keyAlias "upload"
-            keyPassword "scanpdf123"
-        }
-    }
-
     buildTypes {
         release {
-            signingConfig = signingConfigs.release
+            // F-Droid 使用自己的签名；本地发布通过 key.properties 配置
+            def keystoreProps = rootProject.file('key.properties')
+            if (keystoreProps.exists()) {
+                def props = new Properties()
+                props.load(new FileInputStream(keystoreProps))
+                signingConfig = signingConfigs.configure {
+                    storeFile file(props['storeFile'])
+                    storePassword props['storePassword']
+                    keyAlias props['keyAlias']
+                    keyPassword props['keyPassword']
+                }
+            } else {
+                signingConfig = signingConfigs.debug
+            }
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -53,6 +57,5 @@ flutter {
 }
 
 dependencies {
-    implementation "com.google.mlkit:text-recognition:16.0.0"
-    implementation "com.google.mlkit:text-recognition-chinese:16.0.0"
+    // Tesseract OCR native libraries are bundled via the tesseract_ocr Flutter plugin
 }
